@@ -70,9 +70,3 @@ class BC_state:
         else: s += "BLACK's move"
         s += "\n"
         return s
-
-def test_starting_board():
-    init_state = BC_state(INITIAL, WHITE)
-    print(init_state)
-
-test_starting_board()

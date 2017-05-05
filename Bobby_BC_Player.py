@@ -8,7 +8,9 @@ Baroque Chess.
 def makeMove(currentState, currentRemark, timelimit):
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
-    return [[newMoveDesc, currentState], newRemark]
+
+    newState = currentState.__copy__()
+    return [[newMoveDesc, newState], newRemark]
 
 
 def nickname():
@@ -21,6 +23,9 @@ def introduce():
 
 def prepare(player2Nickname):
     pass
+
+def staticEval(state):
+    return
 
 
 CK = 0
@@ -35,18 +40,16 @@ CODE_TO_INIT = {0: '-', 2: 'p', 3: 'P', 4: 'c', 5: 'C', 6: 'l', 7: 'L', 8: 'i', 
 
 def who(piece): return piece % 2
 
-
-def parse(bs):  # bs is board string
+def parse(bs): # bs is board string
     '''Translate a board string into the list of lists representation.'''
-    b = [[0, 0, 0, 0, 0, 0, 0, 0] for r in range(8)]
+    b = [[0,0,0,0,0,0,0,0] for r in range(8)]
     rs9 = bs.split("\n")
-    rs8 = rs9[1:]  # eliminate the empty first item.
+    rs8 = rs9[1:] # eliminate the empty first item.
     for iy in range(8):
         rss = rs8[iy].split(' ');
         for jx in range(8):
             b[iy][jx] = INIT_TO_CODE[rss[jx]]
     return b
-
 
 INITIAL = parse('''
 c l i w k i l f
@@ -58,7 +61,6 @@ p p p p p p p p
 P P P P P P P P
 F L I W K I L C
 ''')
-
 
 class BC_state:
     def __init__(self, old_board=INITIAL, whose_move=WHITE):
@@ -72,17 +74,7 @@ class BC_state:
             for c in range(8):
                 s += CODE_TO_INIT[self.board[r][c]] + " "
             s += "\n"
-        if self.whose_move == WHITE:
-            s += "WHITE's move"
-        else:
-            s += "BLACK's move"
+        if self.whose_move==WHITE: s += "WHITE's move"
+        else: s += "BLACK's move"
         s += "\n"
         return s
-
-
-def test_starting_board():
-    init_state = BC_state(INITIAL, WHITE)
-    print(init_state)
-
-
-test_starting_board()
