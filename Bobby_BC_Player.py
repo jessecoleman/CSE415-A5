@@ -3,14 +3,30 @@ Nobachess, implementation of an agent that can't play
 Baroque Chess.
 
 '''
+import multiprocessing
+import time
 
+
+# Global Variables
+BEST_FOUND_STATE = None
 
 def makeMove(currentState, currentRemark, timelimit):
+    global BEST_FOUND_STATE
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
 
-    newState = currentState.__copy__()
-    return [[newMoveDesc, newState], newRemark]
+    p = multiprocessing.Process(target=iter_deep_search, name="Iterative Deepening", args=(currentState))
+    p.start()
+
+    time.sleep(timelimit - 1)
+
+    p.terminate()
+    p.join()
+
+    best = BEST_FOUND_STATE
+    BEST_FOUND_STATE = None
+    return [[newMoveDesc, best], newRemark]
+
 
 
 def nickname():
@@ -24,7 +40,63 @@ def introduce():
 def prepare(player2Nickname):
     pass
 
-def staticEval(state):
+def static_eval(state):
+    return 0
+
+
+def out_of_time():
+    # TODO: implement
+    return False
+
+def iter_deep_search(currentState):
+    return currentState
+    global BEST_FOUND_STATE
+    depth = 0
+    while True:
+        depth += 1
+        best, best_eval = minimax(currentState, depth)
+        BEST_FOUND_STATE = best
+
+
+
+def minimax(state, depth):
+    if depth == 0:
+        return (state, static_eval(state))
+    else:
+        board = state.board
+        child_states = []
+        for row in range(0, len(board)):
+            for col in range(0, len(board[row])):
+                # Get current piece number
+                p_code = board[row][col]
+                # if current player is the same color as the piece get all child states
+                if who(p_code) == state.whose_move:
+                    child_states += PIECE_MOVEMENTS[p_code](state, row, col)
+
+        best_eval = 0
+        best = None
+        for c_state in child_states:
+            new_state, new_eval = minimax(c_state, depth-1)
+            if best == None:
+                best = new_state
+                best_eval = new_eval
+            elif state.whose_move == WHITE:
+                if new_eval > best_eval:
+                    best_eval = new_eval
+                    best = c_state
+            else:
+                if new_eval < best_eval:
+                    best_eval = new_eval
+                    best = c_state
+
+        return (best, best_eval)
+
+
+
+def max(state):
+    return
+
+def min(state):
     return
 
 BLACK = 0
@@ -79,6 +151,7 @@ class BC_state:
         s += "\n"
         return s
 
+<<<<<<< HEAD
     def __copy__(self):
         new_state = BC_state.__init__(self.board, self.whose_move)
         return 
@@ -165,3 +238,5 @@ def withdrawer_moves(state, x, y):
 
 def king_moves(board, x, y):
     return board
+
+PIECE_MOVEMENTS = {2: lambda x, y, z: print(x, y, z)}
