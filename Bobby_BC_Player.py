@@ -3,15 +3,29 @@ Nobachess, implementation of an agent that can't play
 Baroque Chess.
 
 '''
+import multiprocessing
+import time
 
+
+# Global Variables
+BEST_FOUND_STATE = None
 
 def makeMove(currentState, currentRemark, timelimit):
+    global BEST_FOUND_STATE
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
 
-    newState = iter_deep_search(currentState, timelimit)
+    p = multiprocessing.Process(target=iter_deep_search, name="Iterative Deepening", args=(currentState))
+    p.start()
 
-    return [[newMoveDesc, newState], newRemark]
+    time.sleep(timelimit - 1)
+
+    p.terminate()
+    p.join()
+
+    best = BEST_FOUND_STATE
+    BEST_FOUND_STATE = None
+    return [[newMoveDesc, best], newRemark]
 
 
 
@@ -27,20 +41,22 @@ def prepare(player2Nickname):
     pass
 
 def static_eval(state):
-    return
+    return 0
 
 
 def out_of_time():
     # TODO: implement
     return False
 
-def iter_deep_search(currentState, timelimit):
+def iter_deep_search(currentState):
+    return currentState
+    global BEST_FOUND_STATE
     depth = 0
-    while not out_of_time():
+    while True:
         depth += 1
         best, best_eval = minimax(currentState, depth)
+        BEST_FOUND_STATE = best
 
-    return best
 
 
 def minimax(state, depth):
