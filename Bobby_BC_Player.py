@@ -9,8 +9,10 @@ def makeMove(currentState, currentRemark, timelimit):
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
 
-    newState = currentState.__copy__()
+    newState = iter_deep_search(currentState, timelimit)
+
     return [[newMoveDesc, newState], newRemark]
+
 
 
 def nickname():
@@ -24,11 +26,65 @@ def introduce():
 def prepare(player2Nickname):
     pass
 
-def staticEval(state):
+def static_eval(state):
     return
 
 
-CK = 0
+def out_of_time():
+    # TODO: implement
+    return False
+
+def iter_deep_search(currentState, timelimit):
+    depth = 0
+    while not out_of_time():
+        depth += 1
+        best, best_eval = minimax(currentState, depth)
+
+    return best
+
+
+def minimax(state, depth):
+    if depth == 0:
+        return (state, static_eval(state))
+    else:
+        board = state.board
+        child_states = []
+        for row in range(0, len(board)):
+            for col in range(0, len(board[row])):
+                # Get current piece number
+                p_code = board[row][col]
+                # if current player is the same color as the piece get all child states
+                if who(p_code) == state.whose_move:
+                    child_states += PIECE_MOVEMENTS[p_code](state, row, col)
+
+        best_eval = 0
+        best = None
+        for c_state in child_states:
+            new_state, new_eval = minimax(c_state, depth-1)
+            if best == None:
+                best = new_state
+                best_eval = new_eval
+            elif state.whose_move == WHITE:
+                if new_eval > best_eval:
+                    best_eval = new_eval
+                    best = c_state
+            else:
+                if new_eval < best_eval:
+                    best_eval = new_eval
+                    best = c_state
+
+        return (best, best_eval)
+
+
+
+def max(state):
+    return
+
+def min(state):
+    return
+
+
+BLACK = 0
 WHITE = 1
 
 INIT_TO_CODE = {'p': 2, 'P': 3, 'c': 4, 'C': 5, 'l': 6, 'L': 7, 'i': 8, 'I': 9,
@@ -78,3 +134,5 @@ class BC_state:
         else: s += "BLACK's move"
         s += "\n"
         return s
+
+PIECE_MOVEMENTS = {2: lambda x, y, z: print(x, y, z)}
