@@ -48,11 +48,8 @@
         <entry file="file://$PROJECT_DIR$/Bobby_BC_Player.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="814">
-              <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
-              <folding>
-                <element signature="e#91#126#0" expanded="true" />
-                <marker date="1494194198348" expanded="true" signature="700:888" ph="..." />
-              </folding>
+              <caret line="35" column="0" lean-forward="true" selection-start-line="35" selection-start-column="0" selection-end-line="35" selection-end-column="0" />
+              <folding />
             </state>
           </provider>
         </entry>
@@ -296,11 +293,8 @@
     <entry file="file://$PROJECT_DIR$/Bobby_BC_Player.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="814">
-          <caret line="48" column="0" lean-forward="false" selection-start-line="48" selection-start-column="0" selection-end-line="48" selection-end-column="0" />
-          <folding>
-            <element signature="e#91#126#0" expanded="true" />
-            <marker date="1494194198348" expanded="true" signature="700:888" ph="..." />
-          </folding>
+          <caret line="35" column="0" lean-forward="true" selection-start-line="35" selection-start-column="0" selection-end-line="35" selection-end-column="0" />
+          <folding />
         </state>
       </provider>
     </entry>

@@ -3,39 +3,23 @@ Nobachess, implementation of an agent that can't play
 Baroque Chess.
 
 '''
-from multiprocessing import Process
-import time
+from datetime import datetime, timedelta
 
+# GLOBAL VARIABLES
+BEST_STATE = None
 
-# Global Variables
-BEST_FOUND_STATE = None
-
-PIECE_VALUES = {0: 0, # Empty
-                2: -2, 3: 2, # Pincer
-                4: -4, 5: 4, # Coordinator
-                6: -4, 7: 4, # Leaper
-                8: -4, 9: 4, # Imitator
-                10: -8, 11: 8, # Withdrawer
-                12: -100, 13: 100, # King
-                14: -8, 15: 8} # Freezer
 
 def makeMove(currentState, currentRemark, timelimit):
-    global BEST_FOUND_STATE
+    now = datetime.now()
+    global BEST_STATE
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
     
-    if __name__ == '__main__':
-        p = Process(target=iter_deep_search, name="Iterative Deepening",
-                args=(currentState,))
-        p.start()
+    # search for 10 seconds
+    iter_deep_search(currentState, now + timedelta(0,10))
 
-        time.sleep(timelimit - 1)
-
-        p.terminate()
-        p.join()
-
-    best = BEST_FOUND_STATE
-    BEST_FOUND_STATE = None
+    best = BEST_STATE
+    BEST_STATE = None
     return [[newMoveDesc, best], newRemark]
 
 
@@ -51,58 +35,49 @@ def prepare(player2Nickname):
     pass
 
 
+piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-10,10,2,2]
+
 def static_eval(state):
-    board = state.board
-    val = 0
-
-    for row in board:
-        for col in row:
-           val += PIECE_VALUES[col]
-    return val
+    return sum([[piece_vals[j] for j in state.board[i]] for i in state.board])
 
 
-def iter_deep_search(currentState):
+def iter_deep_search(currentState, endTime):
     #return currentState
-    global BEST_FOUND_STATE
     depth = 0
-    while True:
+    while datetime.now() < endTime:
         depth += 1
-        best, best_eval = minimax(currentState, depth)
-        BEST_FOUND_STATE = best
+        # whether to minimize or maximize
+        opt = -1 if currentState.whose_move == BLACK else 1
+        best_state, best_eval = minimax(currentState, depth, opt)
+        BEST_STATE = best_state
 
-
-
-def minimax(state, depth):
+def minimax(state, depth, opt):
+    # base case
     if depth == 0:
         return (state, static_eval(state))
-    else:
-        board = state.board
-        child_states = []
-        for x in board:
-            for y in board[x]:
-                # Get current piece number
-                piece = board[x][y]
-                # if current player is the same color as the piece get all child states
-                if piece != 0 and who(piece) == state.whose_move:
-                    child_states += move(state, x, y)
 
-        best_eval = 0
-        best = None
-        for c_state in child_states:
-            new_state, new_eval = minimax(c_state, depth-1)
-            if best == None:
-                best = new_state
-                best_eval = new_eval
-            elif state.whose_move == WHITE:
-                if new_eval > best_eval:
-                    best_eval = new_eval
-                    best = c_state
-            else:
-                if new_eval < best_eval:
-                    best_eval = new_eval
-                    best = c_state
+    board = state.board
+    child_states = []
+    for x in range(0, len(board)):
+        for y in range(0, len(board)):
+            # Get current piece number
+            piece = board[x][y]
+            # if current player is the same color as the piece get all child states
+            if piece != 0 and who(piece) == state.whose_move:
+                child_states += move(state, x, y)
 
-        return (best, best_eval)
+    best_eval = 0
+    best = None
+    for c_state in child_states:
+        new_state, new_eval = minimax(c_state, depth-1, -opt)
+        if best == None:
+            best = new_state
+            best_eval = new_eval
+        elif new_eval > opt*best_eval:
+            best_eval = new_eval
+            best = c_state
+
+    return (best, best_eval)
 
 
 
@@ -149,12 +124,11 @@ from copy import deepcopy
 
 class BC_state:
     def __init__(self, old_board=INITIAL, whose_move=WHITE, frozen=[],
-            kingPos=((0,4), (7,4))):
-        self.board = [r[:] for r in old_board]
+            kingPos=[[0,4], [7,4]]):
         self.whose_move = whose_move;
-        self.frozen = frozen[:]
-        self.kingPos = ((kingPos[0][0], kingPos[0][1]),
-            (kingPos[1][0], kingPos[1][1]))
+        self.board = [r[:] for r in old_board]
+        self.frozen = [(f[0], f[1]) for f in frozen]
+        self.kingPos = [p[:] for p in kingPos]
 
     def __repr__(self):
         s = ''
