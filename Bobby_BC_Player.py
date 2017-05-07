@@ -16,10 +16,8 @@ def makeMove(currentState, currentRemark, timelimit):
     newRemark = "I don't even know how to move!"
     
     # search for 10 seconds
-    iter_deep_search(currentState, now + timedelta(0,10))
+    best = iter_deep_search(currentState, now + timedelta(0,timelimit))
 
-    best = BEST_STATE
-    BEST_STATE = None
     return [[newMoveDesc, best], newRemark]
 
 
@@ -49,7 +47,9 @@ def iter_deep_search(currentState, endTime):
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state, best_eval = minimax(currentState, depth, opt)
-        BEST_STATE = best_state
+        best = best_state
+
+    return best
 
 def minimax(state, depth, opt):
     # base case
@@ -80,12 +80,6 @@ def minimax(state, depth, opt):
     return (best, best_eval)
 
 
-
-def max(state):
-    return
-
-def min(state):
-    return
 
 BLACK = 0
 WHITE = 1
@@ -142,11 +136,12 @@ class BC_state:
         return s
 
     def __copy__(self):
-        new_state = BC_state(self.board.__copy__(), self.whose_move, self.frozen,
+        new_state = BC_state(self.board.copy(), self.whose_move, self.frozen,
             self.kingPos)
         return new_state
 
 def king_search(board):
+    global INIT_TO_CODE
     wKingPiece = None
     bKingPiece = None
     for i in board:
@@ -274,3 +269,14 @@ def king_capture(state, x, y, x1, y1):
         state.kingPos[state.whose_move] = (x1, y1)
     except: pass
     return state
+
+
+if __name__ == "__main__":
+    print("Main Method called")
+    state = BC_state()
+    print(state)
+
+    now = datetime.now()
+    new_state = iter_deep_search(state, now + timedelta(0, 10))
+
+    print(new_state)
