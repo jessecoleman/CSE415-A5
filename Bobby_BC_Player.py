@@ -3,7 +3,7 @@ Nobachess, implementation of an agent that can't play
 Baroque Chess.
 
 '''
-import multiprocessing
+from multiprocessing import Process
 import time
 
 
@@ -14,14 +14,16 @@ def makeMove(currentState, currentRemark, timelimit):
     global BEST_FOUND_STATE
     newMoveDesc = 'No move'
     newRemark = "I don't even know how to move!"
+    
+    if __name__ == '__main__':
+        p = Process(target=iter_deep_search, name="Iterative Deepening", 
+                args=(currentState,))
+        p.start()
 
-    p = multiprocessing.Process(target=iter_deep_search, name="Iterative Deepening", args=(currentState))
-    p.start()
+        time.sleep(timelimit - 1)
 
-    time.sleep(timelimit - 1)
-
-    p.terminate()
-    p.join()
+        p.terminate()
+        p.join()
 
     best = BEST_FOUND_STATE
     BEST_FOUND_STATE = None
@@ -34,7 +36,7 @@ def nickname():
 
 
 def introduce():
-    return "I'm Nobachess, I don't play baroque chess at this time."
+    return "I'm an android named Bobby."
 
 
 def prepare(player2Nickname):
@@ -49,7 +51,7 @@ def out_of_time():
     return False
 
 def iter_deep_search(currentState):
-    return currentState
+    #return currentState
     global BEST_FOUND_STATE
     depth = 0
     while True:
@@ -108,7 +110,6 @@ INIT_TO_CODE = {'p': 2, 'P': 3, 'c': 4, 'C': 5, 'l': 6, 'L': 7, 'i': 8, 'I': 9,
 CODE_TO_INIT = {0: '-', 2: 'p', 3: 'P', 4: 'c', 5: 'C', 6: 'l', 7: 'L', 8: 'i', 9: 'I',
                 10: 'w', 11: 'W', 12: 'k', 13: 'K', 14: 'f', 15: 'F'}
 
-
 def who(piece): return piece % 2
 
 def parse(bs): # bs is board string
@@ -137,7 +138,7 @@ from copy import deepcopy
 
 class BC_state:
     def __init__(self, old_board=INITIAL, whose_move=WHITE, frozen=[],
-            kingPos=((0,4), (7,4)):
+            kingPos=((0,4), (7,4))):
         self.board = [r[:] for r in old_board]
         self.whose_move = whose_move;
         self.frozen = frozen[:]
@@ -181,7 +182,7 @@ def move(state, xPos, yPos):
     piece = state.board[xPos][yPos]
     piece_t = piece - who(piece)
     # loop through directions
-    directions = piece_t == INIT_TO_CODE['p'] ? vec[0:4] : vec
+    directions = vec[0:4] if piece_t == INIT_TO_CODE['p'] else vec
     for i, j in directions:
         x = xPos
         y = yPos
@@ -198,7 +199,7 @@ def move(state, xPos, yPos):
             future_state.append(defense)
             # aggressive move
             off = defense.__copy__()
-            if piece_t == INIT_TO_CODE['p']
+            if piece_t == INIT_TO_CODE['p']:
                 future_states.append(pincher_capture(off, x, y))
             # if piece is coordinator
             elif piece_t == INIT_TO_CODE['c']:
@@ -217,7 +218,7 @@ def move(state, xPos, yPos):
                 future_states.append(withdrawer_capture(off, xPos-i, yPos-i))
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
-                future_states.append(king_capture(off, x, y, x+i, y+i)
+                future_states.append(king_capture(off, x, y, x+i, y+i))
     return future_states
 
 def pincher_capture(state, x, y):
@@ -244,7 +245,7 @@ def coordinator_capture(state, x, y):
 def freezer_capture(state, x, y, x0, y0):
     state.frozen[state.whose_move] = []
     for i, j in vec:
-        if x+i >= 0 and y+j >= and x+i <= 7 and y+j <= 7:
+        if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
             state.frozen[state.whose_move].append((x+i,y+j))
     return state
 
@@ -272,7 +273,8 @@ def imitator_capture(state, x, y, x0, y0, i, j):
             state.board[kx][y] = 0
     except(IndexError): pass
     try:
-        state.board
+        state.board[x][y] == None
+    except: pass
     return state
 
 def withdrawer_capture(state, x, y):
