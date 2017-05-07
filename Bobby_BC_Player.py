@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 
 # GLOBAL VARIABLES
 BEST_STATE = None
+TIME_LIMIT_OFFSET = 0.01
 
 
 def makeMove(currentState, currentRemark, timelimit):
@@ -44,16 +45,32 @@ def iter_deep_search(currentState, endTime):
     #return currentState
     depth = 0
     while datetime.now() < endTime:
-        print(datetime.now(), endTime)
         depth += 1
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
-        best_state, best_eval = minimax(currentState, depth, opt)
-        best = best_state
+
+        best_state, best_eval = minimax(currentState, depth, opt, endTime)
+
+        if best_state != None:
+            best = best_state
+        else:
+            break
 
     return best
 
-def minimax(state, depth, opt):
+
+def is_over_time(endTime):
+    global TIME_LIMIT_OFFSET
+    now = datetime.now()
+    return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
+
+
+def minimax(state, depth, opt, endTime):
+
+    # Time check
+    if is_over_time(endTime):
+            return (None, 0)
+
     # base case
     if depth == 0:
         return (state, static_eval(state))
@@ -71,7 +88,11 @@ def minimax(state, depth, opt):
     best_eval = 0
     best = None
     for c_state in child_states:
-        new_state, new_eval = minimax(c_state, depth-1, -opt)
+        # Time check
+        if is_over_time(endTime):
+            return (None, 0)
+
+        new_state, new_eval = minimax(c_state, depth-1, -opt, endTime)
         if best == None:
             best = new_state
             best_eval = new_eval
