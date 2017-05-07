@@ -83,6 +83,7 @@ def minimax(state, depth, opt, endTime):
             piece = board[x][y]
             # if current player is the same color as the piece get all child states
             if piece != 0 and who(piece) == state.whose_move:
+                print(x, y)
                 child_states += move(state, x, y)
 
     best_eval = 0
@@ -243,7 +244,7 @@ def move(state, xPos, yPos):
             if not child_states[-1].__eq__(defense): child_states.append(defense)
     for i in child_states:
         print(i)
-        time.sleep(1)
+        time.sleep(.25)
     return child_states
 
 def pincher_capture(state, x, y):
@@ -323,6 +324,6 @@ if __name__ == "__main__":
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 10))
+    new_state = iter_deep_search(state, now + timedelta(0, 30))
 
     print(new_state)
