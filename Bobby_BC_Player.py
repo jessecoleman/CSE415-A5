@@ -10,6 +10,9 @@ import time
 # Global Variables
 BEST_FOUND_STATE = None
 
+PIECE_VALUES = {0: 0, 2: -2, 3: 2, 4: -4, 5: 4, 6: -4, 7: 4, 8: -4, 9: 4,
+                10: -8, 11: 8, 12: -100, 13: 100, 14: -8, 15: 8}
+
 def makeMove(currentState, currentRemark, timelimit):
     global BEST_FOUND_STATE
     newMoveDesc = 'No move'
@@ -43,7 +46,13 @@ def prepare(player2Nickname):
     pass
 
 def static_eval(state):
-    return 0
+    board = state.board
+    val = 0
+
+    for row in board:
+        for col in row:
+           val += PIECE_VALUES[col]
+    return val
 
 
 def out_of_time():
