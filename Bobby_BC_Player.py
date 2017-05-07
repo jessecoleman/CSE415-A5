@@ -10,8 +10,14 @@ import time
 # Global Variables
 BEST_FOUND_STATE = None
 
-PIECE_VALUES = {0: 0, 2: -2, 3: 2, 4: -4, 5: 4, 6: -4, 7: 4, 8: -4, 9: 4,
-                10: -8, 11: 8, 12: -100, 13: 100, 14: -8, 15: 8}
+PIECE_VALUES = {0: 0, # Empty
+                2: -2, 3: 2, # Pincer
+                4: -4, 5: 4, # Coordinator
+                6: -4, 7: 4, # Leaper
+                8: -4, 9: 4, # Imitator
+                10: -8, 11: 8, # Withdrawer
+                12: -100, 13: 100, # King
+                14: -8, 15: 8} # Freezer
 
 def makeMove(currentState, currentRemark, timelimit):
     global BEST_FOUND_STATE
@@ -19,7 +25,7 @@ def makeMove(currentState, currentRemark, timelimit):
     newRemark = "I don't even know how to move!"
     
     if __name__ == '__main__':
-        p = Process(target=iter_deep_search, name="Iterative Deepening", 
+        p = Process(target=iter_deep_search, name="Iterative Deepening",
                 args=(currentState,))
         p.start()
 
@@ -41,9 +47,9 @@ def nickname():
 def introduce():
     return "I'm an android named Bobby."
 
-
 def prepare(player2Nickname):
     pass
+
 
 def static_eval(state):
     board = state.board
@@ -54,10 +60,6 @@ def static_eval(state):
            val += PIECE_VALUES[col]
     return val
 
-
-def out_of_time():
-    # TODO: implement
-    return False
 
 def iter_deep_search(currentState):
     #return currentState
@@ -166,7 +168,7 @@ class BC_state:
         return s
 
     def __copy__(self):
-        new_state = BC_state.__init__(self.board, self.whose_move, self.frozen,
+        new_state = BC_state(self.board.__copy__(), self.whose_move, self.frozen,
             self.kingPos)
         return new_state
 
@@ -205,7 +207,7 @@ def move(state, xPos, yPos):
             # pick up piece for move
             defense.board[xPos][yPos] = 0
             defense.board[x][y] = piece
-            future_state.append(defense)
+            future_states.append(defense)
             # aggressive move
             off = defense.__copy__()
             if piece_t == INIT_TO_CODE['p']:
@@ -221,7 +223,7 @@ def move(state, xPos, yPos):
                 future_states.append(leaper_capture(off, x, y, i, j))
             # if piece is imitator
             elif piece_t == INIT_TO_CODE['i']:
-                future_states.append(imitator_captures(off,x,y,xPos,yPos,i,j))
+                future_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
                 future_states.append(withdrawer_capture(off, xPos-i, yPos-i))
