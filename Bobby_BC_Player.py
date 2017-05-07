@@ -3,6 +3,7 @@ Nobachess, implementation of an agent that can't play
 Baroque Chess.
 
 '''
+import time
 from datetime import datetime, timedelta
 
 # GLOBAL VARIABLES
@@ -132,9 +133,8 @@ def freezer_search(board, whose_move):
         for y in range(0, len(board[x])):
             if board[x][y] - who(board[x][y]) == INIT_TO_CODE['f']:
                 for i, j in vec:
-                    try:
+                    if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
                         frozen[whose_move].append((x+i, y+j))
-                    except(IndexError): pass
     return frozen
 
 class State:
@@ -165,12 +165,19 @@ class State:
             self.kingPos, self.frozen)
         return new_state
 
+    def __eq__(self, other):
+        if isinstance(other, State):
+            for i in range(0, len(self.board)):
+                if self.board[i] != other.board[i]: return False
+            return True
+        return False
+
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
 def move(state, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: return []
-    future_states = []
+    child_states = []
     # get current piece
     piece = state.board[xPos][yPos]
     piece_t = piece - who(piece)
@@ -186,33 +193,37 @@ def move(state, xPos, yPos):
             y += j
             # non-aggressive move
             defense = state.__copy__()
+            defense.whose_move = 1 - defense.whose_move
             # pick up piece for move
             defense.board[xPos][yPos] = 0
             defense.board[x][y] = piece
-            future_states.append(defense)
             # aggressive move
             off = defense.__copy__()
             if piece_t == INIT_TO_CODE['p']:
-                future_states.append(pincher_capture(off, x, y))
+                child_states.append(pincher_capture(off, x, y))
             # if piece is coordinator
             elif piece_t == INIT_TO_CODE['c']:
-                future_states.append(coordinator_capture(off, x, y))
+                child_states.append(coordinator_capture(off, x, y))
             # if piece is freezer
             elif piece_t == INIT_TO_CODE['f']:
-                future_states.append(freezer_capture(off, x, y))
+                child_states.append(freezer_capture(off, x, y))
             # if piece is leaper
             elif piece_t == INIT_TO_CODE['l']:
-                future_states.append(leaper_capture(off, x, y, i, j))
+                child_states.append(leaper_capture(off, x, y, i, j))
             # if piece is imitator
             elif piece_t == INIT_TO_CODE['i']:
-                future_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
+                child_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
-                future_states.append(withdrawer_capture(off, xPos-i, yPos-i))
+                child_states.append(withdrawer_capture(off, xPos-i, yPos-i))
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
-                future_states.append(king_capture(off, x, y, x+i, y+i))
-    return future_states
+                child_states.append(king_capture(off, x, y, x+i, y+i))
+            if not child_states[-1].__eq__(defense): child_states.append(defense)
+    for i in child_states:
+        print(i)
+        time.sleep(1)
+    return child_states
 
 def pincher_capture(state, x, y):
     piece = state.board[x][y]
