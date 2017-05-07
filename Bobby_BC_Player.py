@@ -16,10 +16,10 @@ def makeMove(currentState, currentRemark, timelimit):
     newRemark = "I don't even know how to move!"
     
     # search for 10 seconds
-    best = iter_deep_search(currentState, now + timedelta(0,timelimit))
+    c_state = State(currentState.board, currentState.whose_move)
+    best = iter_deep_search(c_state, now + timedelta(0,timelimit))
 
     return [[newMoveDesc, best], newRemark]
-
 
 
 def nickname():
@@ -36,13 +36,14 @@ def prepare(player2Nickname):
 piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-10,10,2,2]
 
 def static_eval(state):
-    return sum([[piece_vals[j] for j in state.board[i]] for i in state.board])
+    return sum([sum([piece_vals[j] for j in i]) for i in state.board])
 
 
 def iter_deep_search(currentState, endTime):
     #return currentState
     depth = 0
     while datetime.now() < endTime:
+        print(datetime.now(), endTime)
         depth += 1
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
@@ -114,15 +115,39 @@ P P P P P P P P
 F L I W K I L C
 ''')
 
-from copy import deepcopy
+def king_search(board):
+    wKingPiece = None
+    bKingPiece = None
+    for i in range(0, len(board)):
+        for j in range(0, len(board[i])):
+            if board[i][j] == INIT_TO_CODE['K']:
+                wKingPiece = (i, j)
+            elif board[i][j] == INIT_TO_CODE['k']:
+                bKingPiece = (i, j)
+    return [wKingPiece, bKingPiece]
 
-class BC_state:
-    def __init__(self, old_board=INITIAL, whose_move=WHITE, frozen=[],
-            kingPos=[[0,4], [7,4]]):
+def freezer_search(board, whose_move):
+    frozen = [[],[]]
+    for x in range(0, len(board)):
+        for y in range(0, len(board[x])):
+            if board[x][y] - who(board[x][y]) == INIT_TO_CODE['f']:
+                for i, j in vec:
+                    try:
+                        frozen[whose_move].append((x+i, y+j))
+                    except(IndexError): pass
+    return frozen
+
+class State:
+    def __init__(self, old_board=INITIAL, whose_move=WHITE, kingPos=[], frozen=[]):
         self.whose_move = whose_move;
         self.board = [r[:] for r in old_board]
-        self.frozen = [(f[0], f[1]) for f in frozen]
-        self.kingPos = [p[:] for p in kingPos]
+        if len(kingPos) == 0: self.kingPos = king_search(old_board)
+        else: self.kingPos = [(k[0], k[1]) for k in kingPos]
+        if len(frozen) == 0: self.frozen = freezer_search(old_board, whose_move)
+        else:
+            self.frozen = []
+            self.frozen.append([(f[0], f[1]) for f in frozen[0]])
+            self.frozen.append([(f[0], f[1]) for f in frozen[1]])
 
     def __repr__(self):
         s = ''
@@ -136,21 +161,9 @@ class BC_state:
         return s
 
     def __copy__(self):
-        new_state = BC_state(self.board.copy(), self.whose_move, self.frozen,
-            self.kingPos)
+        new_state = State(self.board, self.whose_move,
+            self.kingPos, self.frozen)
         return new_state
-
-def king_search(board):
-    global INIT_TO_CODE
-    wKingPiece = None
-    bKingPiece = None
-    for i in board:
-        for j in board[i]:
-            if board[i][j] == INIT_TO_CODE('K'):
-                wKingPiece = (i, j)
-            elif board[i][j] == INIT_TO_CODE('k'):
-                bKingPiece = (i, j)
-    return (wKingPiece, bKingPiece)
 
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
@@ -168,7 +181,7 @@ def move(state, xPos, yPos):
         y = yPos
         # don't move pieces off the board or into another piece
         while x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7 \
-                and new_state.board[x+i][y+j] == 0:
+                and state.board[x+i][y+j] == 0:
             x += i
             y += j
             # non-aggressive move
@@ -202,6 +215,7 @@ def move(state, xPos, yPos):
     return future_states
 
 def pincher_capture(state, x, y):
+    piece = state.board[x][y]
     # search surrounding spaces to look for a capture
     for i, j in vec[0:4]:
         try:
@@ -222,7 +236,7 @@ def coordinator_capture(state, x, y):
     except(IndexError): pass
     return state
 
-def freezer_capture(state, x, y, x0, y0):
+def freezer_capture(state, x, y):
     state.frozen[state.whose_move] = []
     for i, j in vec:
         if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
@@ -273,7 +287,7 @@ def king_capture(state, x, y, x1, y1):
 
 if __name__ == "__main__":
     print("Main Method called")
-    state = BC_state()
+    state = State()
     print(state)
 
     now = datetime.now()
