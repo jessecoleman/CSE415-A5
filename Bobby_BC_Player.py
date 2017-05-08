@@ -7,11 +7,18 @@ import time
 from datetime import datetime, timedelta
 import math
 import heapq
+import random
 
 # GLOBAL VARIABLES
 BEST_STATE = None
 TIME_LIMIT_OFFSET = 0.01
 
+# initialize zobrist table
+random.seed(10)
+ZOBRIST_N = [[0]*14]*64
+for x in range(64):
+    for y in range(14):
+        ZOBRIST_N[x][y] = random.randint(0, 2**64)
 
 def makeMove(currentState, currentRemark, timelimit):
     now = datetime.now()
@@ -147,7 +154,6 @@ def get_child_states(state):
     return child_states
 
 
-
 BLACK = 0
 WHITE = 1
 
@@ -222,6 +228,17 @@ def freezer_search(board, whose_move):
                     if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
                         frozen[who(board[x][y])] += (x+i, y+j)
     return frozen
+
+def zhash(board):
+    global ZOBRIST_N
+    val = 0
+    for x in range(8):
+        for y in range(8):
+            piece = None
+            piece = who(board[x][y])
+            if(piece != None):
+                val ^= ZOBRIST_N[8*x+y][piece]
+    return val
 
 class State:
     def __init__(self, old_board=INITIAL, whose_move=WHITE, kingPos=[], frozen=[]):
