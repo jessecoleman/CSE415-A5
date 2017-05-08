@@ -104,12 +104,9 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
         new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
                                       alpha, beta)
-        if best == None:
-            best = new_state
-            best_eval = new_eval
-        elif new_eval > opt*best_eval:
-            best_eval = new_eval
+        if best == None or new_eval >= opt*best_eval:
             best = c_state
+            best_eval = new_eval
 
         if opt == 1:
             # set alpha
@@ -132,7 +129,7 @@ def minimax(state, depth, opt, endTime):
             break
 
         new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime, -math.inf, math.inf)
-        if best == None or best_eval < new_eval:
+        if best == None or new_eval >= opt*best_eval:
             best = c_state
             best_eval = new_eval
 
