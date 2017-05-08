@@ -221,7 +221,7 @@ def freezer_search(board, whose_move):
             if board[x][y] - who(board[x][y]) == INIT_TO_CODE['f']:
                 for i, j in vec:
                     if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
-                        frozen[who(board[x][y])] += (x+i, y+j)
+                        frozen[who(board[x][y])].append((x+i, y+j))
     return frozen
 
 def zhash(board):
@@ -311,7 +311,7 @@ def move(state, xPos, yPos):
             # aggressive move
             off = defense.__copy__()
             if piece_t == INIT_TO_CODE['p']:
-                child_states += pincher_capture(off, x, y)
+                child_states.append(pincher_capture(off, x, y))
             # if piece is coordinator
             elif piece_t == INIT_TO_CODE['c']:
                 child_states.append(coordinator_capture(off, x, y))
@@ -360,7 +360,7 @@ def freezer_capture(state, x, y):
     state.frozen[state.whose_move] = []
     for i, j in vec:
         if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
-            state.frozen[state.whose_move] += (x+i,y+j)
+            state.frozen[state.whose_move].append((x+i,y+j))
     return state
 
 def leaper_capture(state, x, y, i, j):
