@@ -7,11 +7,18 @@ import time
 from datetime import datetime, timedelta
 import math
 import heapq
+import random
 
 # GLOBAL VARIABLES
 BEST_STATE = None
 TIME_LIMIT_OFFSET = 0.01
 
+# initialize zobrist table
+random.seed(10)
+ZOBRIST_N = [[0]*14]*64
+for x in range(64):
+    for y in range(14):
+        ZOBRIST_N[x][y] = random.randint(0, 2**64)
 
 def makeMove(currentState, currentRemark, timelimit):
     now = datetime.now()
@@ -93,7 +100,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             break
 
         new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
-                                      alpha, beta)
+                alpha, beta)
         if best == None:
             best = new_state
             best_eval = new_eval
@@ -122,7 +129,7 @@ def minimax(state, depth, opt, endTime):
 
         new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime,
                 -math.inf, math.inf)
-        if best == None or best_eval < new_eval:
+        if best == None or new_eval >= opt*best_eval:
             best = c_state
             best_eval = new_eval
 
@@ -140,7 +147,6 @@ def get_child_states(state):
                 child_states += move(state, x, y)
 
     return child_states
-
 
 
 BLACK = 0
@@ -217,6 +223,17 @@ def freezer_search(board, whose_move):
                     if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
                         frozen[who(board[x][y])] += (x+i, y+j)
     return frozen
+
+def zhash(board):
+    global ZOBRIST_N
+    val = 0
+    for x in range(8):
+        for y in range(8):
+            piece = None
+            piece = who(board[x][y])
+            if(piece != None):
+                val ^= ZOBRIST_N[8*x+y][piece]
+    return val
 
 class State:
     def __init__(self, old_board=INITIAL, whose_move=WHITE, kingPos=[], frozen=[]):
