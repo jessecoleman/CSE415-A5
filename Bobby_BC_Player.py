@@ -5,6 +5,8 @@ Baroque Chess.
 '''
 import time
 from datetime import datetime, timedelta
+import math
+import heapq
 
 # GLOBAL VARIABLES
 BEST_STATE = None
@@ -14,8 +16,8 @@ TIME_LIMIT_OFFSET = 0.01
 def makeMove(currentState, currentRemark, timelimit):
     now = datetime.now()
     global BEST_STATE
-    newMoveDesc = 'No move'
-    newRemark = "I don't even know how to move!"
+    newMoveDesc = 'I moved!'
+    newRemark = "Your turn!"
     
     # search for 10 seconds
     c_state = State(currentState.board, currentState.whose_move)
@@ -35,21 +37,21 @@ def prepare(player2Nickname):
     pass
 
 
-piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-10,10,2,2]
+piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 
 def static_eval(state):
     return sum([sum([piece_vals[j] for j in i]) for i in state.board])
 
 
 def iter_deep_search(currentState, endTime):
-    #return currentState
     depth = 0
+    best = None
     while datetime.now() < endTime:
         depth += 1
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
 
-        best_state, best_eval = minimax(currentState, depth, opt, endTime)
+        best_state = minimax(currentState, depth, opt, endTime)
 
         if best_state != None:
             best = best_state
@@ -64,40 +66,37 @@ def is_over_time(endTime):
     now = datetime.now()
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
-
-def minimax(state, depth, opt, endTime):
+def minimax_helper(state, depth, opt, endTime, alpha, beta):
     # Time check
     if is_over_time(endTime):
         return (None, 0)
 
     # base case
     if depth == 0:
-        return (state, static_eval(state))
+        eval = static_eval(state)
+        return (state, eval)
 
     board = state.board
-    child_states = []
-    for x in range(0, len(board)):
-        for y in range(0, len(board)):
-            #print(depth, opt, x, y)
-            # Get current piece number
-            piece = board[x][y]
-            # if current player is the same color as the piece get all child states
-            if piece != 0 and who(piece) == state.whose_move:
-                child_states += move(state, x, y)
+    child_states = get_child_states(state)
 
-    best_eval = 0
     best = None
+    best_eval = 0
     for c_state in child_states:
-        time.sleep(0.5)
-        print("parent: ")
-        print(state)
-        print("child: ")
-        print(c_state)
+        # time.sleep(0.25)
+        # print("parent: ")
+        # print(state)
+        # print("child: ")
+        # print(c_state)
         # Time check
         if is_over_time(endTime):
-            return (None, 0)
+            break
 
-        new_state, new_eval = minimax(c_state, depth-1, -opt, endTime)
+        # check alpha beta for invalid state
+        if alpha >= beta:
+            break
+
+        new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
+                                      alpha, beta)
         if best == None:
             best = new_state
             best_eval = new_eval
@@ -105,7 +104,47 @@ def minimax(state, depth, opt, endTime):
             best_eval = new_eval
             best = c_state
 
+        if opt == 1:
+            # set alpha
+            alpha = max(alpha, new_eval)
+        else:
+            # set beta
+            beta = min(beta, new_eval)
+
+
     return (best, best_eval)
+
+def minimax(state, depth, opt, endTime):
+    child_states = get_child_states(state)
+
+    best = None
+    best_eval = 0
+    for c_state in child_states:
+        #check time
+        if is_over_time(endTime):
+            break
+
+        new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime, -math.inf, math.inf)
+        if best == None or best_eval < new_eval:
+            best = c_state
+            best_eval = new_eval
+
+    return best
+
+
+def get_child_states(state):
+    board = state.board
+    child_states = []
+    for x in range(0, len(board)):
+        for y in range(0, len(board)):
+            # print(depth, opt, x, y)
+            # Get current piece number
+            piece = board[x][y]
+            # if current player is the same color as the piece get all child states
+            if piece != 0 and who(piece) == state.whose_move:
+                child_states += move(state, x, y)
+
+    return child_states
 
 
 
@@ -151,8 +190,18 @@ INITIAL_2 = parse('''
 - - - - - - - -
 - - - - - - - -
 - - c - - - K -
-''') 
+''')
 
+INITIAL_3 = parse('''
+- - - - - - k -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - K p
+- - - - - p - -
+- - - - - - - -
+- - - - - - - -
+''')
 def king_search(board):
     wKingPiece = None
     bKingPiece = None
@@ -206,16 +255,23 @@ class State:
             return True
         return False
 
+    def __lt__(self, other):
+        if self.whose_move == WHITE:
+           lt = static_eval(self) > static_eval(other)
+        else:
+            lt = static_eval(self) < static_eval(other)
+        return lt
+
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
 def move(state, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
-        print("frozen")
-        print(state)
-        print("whose_move", state.whose_move)
-        print(xPos, yPos)
-        print(state.frozen)
+        # print("frozen")
+        # print(state)
+        # print("whose_move", state.whose_move)
+        # print(xPos, yPos)
+        # print(state.frozen)
         return []
     child_states = []
     # get current piece
@@ -378,11 +434,10 @@ def king_capture(state, x, y, x1, y1):
 
 
 if __name__ == "__main__":
-    print("Main Method called")
     state = State(old_board=INITIAL_2)
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 300))
+    new_state = iter_deep_search(state, now + timedelta(0, 18))
 
     print(new_state)
