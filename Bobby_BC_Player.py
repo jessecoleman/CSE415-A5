@@ -66,10 +66,9 @@ def is_over_time(endTime):
 
 
 def minimax(state, depth, opt, endTime):
-
     # Time check
     if is_over_time(endTime):
-            return (None, 0)
+        return (None, 0)
 
     # base case
     if depth == 0:
@@ -79,16 +78,21 @@ def minimax(state, depth, opt, endTime):
     child_states = []
     for x in range(0, len(board)):
         for y in range(0, len(board)):
+            #print(depth, opt, x, y)
             # Get current piece number
             piece = board[x][y]
             # if current player is the same color as the piece get all child states
             if piece != 0 and who(piece) == state.whose_move:
-                print(x, y)
                 child_states += move(state, x, y)
 
     best_eval = 0
     best = None
     for c_state in child_states:
+        time.sleep(0.5)
+        print("parent: ")
+        print(state)
+        print("child: ")
+        print(c_state)
         # Time check
         if is_over_time(endTime):
             return (None, 0)
@@ -134,9 +138,20 @@ p p p p p p p p
 - - - - - - - -
 - - - - - - - -
 - - - - - - - -
-P P P P P P P P
-F L I W K I L C
+p p p p p p p p
+f l i w k i l c
 ''')
+
+INITIAL_2 = parse('''
+- - - - - - - -
+- - - - - - - -
+- - - K p - - -
+- - - - - - - -
+- - - - - - - -
+- - p - - - - -
+- - - - - - - -
+- - - - - - - k
+''') 
 
 def king_search(board):
     wKingPiece = None
@@ -156,7 +171,7 @@ def freezer_search(board, whose_move):
             if board[x][y] - who(board[x][y]) == INIT_TO_CODE['f']:
                 for i, j in vec:
                     if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
-                        frozen[whose_move].append((x+i, y+j))
+                        frozen[who(board[x][y])].append((x+i, y+j))
     return frozen
 
 class State:
@@ -166,10 +181,7 @@ class State:
         if len(kingPos) == 0: self.kingPos = king_search(old_board)
         else: self.kingPos = [(k[0], k[1]) for k in kingPos]
         if len(frozen) == 0: self.frozen = freezer_search(old_board, whose_move)
-        else:
-            self.frozen = []
-            self.frozen.append([(f[0], f[1]) for f in frozen[0]])
-            self.frozen.append([(f[0], f[1]) for f in frozen[1]])
+        else: self.frozen = [[(f[0], f[1]) for f in i] for i in frozen]
 
     def __repr__(self):
         s = ''
@@ -198,7 +210,13 @@ vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
 def move(state, xPos, yPos):
     # if piece is frozen by opponent's freezer
-    if (xPos, yPos) in state.frozen[1-state.whose_move]: return []
+    if (xPos, yPos) in state.frozen[1-state.whose_move]: 
+        print("frozen")
+        print(state)
+        print("whose_move", state.whose_move)
+        print(xPos, yPos)
+        print(state.frozen)
+        return []
     child_states = []
     # get current piece
     piece = state.board[xPos][yPos]
@@ -241,10 +259,9 @@ def move(state, xPos, yPos):
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
                 child_states.append(king_capture(off, x, y, x+i, y+i))
-            if not child_states[-1].__eq__(defense): child_states.append(defense)
-    for i in child_states:
-        print(i)
-        time.sleep(.25)
+            if not child_states[-1].__eq__(defense) \
+                    and not child_states[-1].__eq__(state):
+                child_states.append(defense)
     return child_states
 
 def pincher_capture(state, x, y):
@@ -320,10 +337,10 @@ def king_capture(state, x, y, x1, y1):
 
 if __name__ == "__main__":
     print("Main Method called")
-    state = State()
+    state = State(old_board=INITIAL_2, whose_move=BLACK)
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 30))
+    new_state = iter_deep_search(state, now + timedelta(0, 300))
 
     print(new_state)
