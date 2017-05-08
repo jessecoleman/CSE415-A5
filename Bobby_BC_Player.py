@@ -143,14 +143,14 @@ f l i w k i l c
 ''')
 
 INITIAL_2 = parse('''
+- - - - - - k -
+- C - - - - - -
+p - - - - - - -
+- - - - - - - -
+- - - - - - - p
 - - - - - - - -
 - - - - - - - -
-- - - K p - - -
-- - - - - - - -
-- - - - - - - -
-- - p - - - - -
-- - - - - - - -
-- - - - - - - k
+- - - p - - - K
 ''') 
 
 def king_search(board):
@@ -231,6 +231,9 @@ def move(state, xPos, yPos):
                 and state.board[x+i][y+j] == 0:
             x += i
             y += j
+            # king only moves one space
+            if piece_t == INIT_TO_CODE['k'] \
+                    and (abs(x-xPos) > 1 or abs(y-yPos) > 1): break
             # non-aggressive move
             defense = state.__copy__()
             defense.whose_move = 1 - defense.whose_move
@@ -255,12 +258,11 @@ def move(state, xPos, yPos):
                 child_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
-                child_states.append(withdrawer_capture(off, xPos-i, yPos-i))
+                child_states.append(withdrawer_capture(off, xPos-i, yPos-j))
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
-                child_states.append(king_capture(off, x, y, x+i, y+i))
-            if not child_states[-1].__eq__(defense) \
-                    and not child_states[-1].__eq__(state):
+                child_states.append(king_capture(off, x, y, x+i, y+j))
+            if not child_states[-1].__eq__(defense):
                 child_states.append(defense)
     return child_states
 
@@ -279,9 +281,9 @@ def coordinator_capture(state, x, y):
     kx, ky = state.kingPos[state.whose_move]
     # try to coordinate with king to capture
     try:
-        if who(state.board[x][ky]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[x][ky]):
             state.board[x][ky] = 0
-        if who(state.board[kx][y]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[kx][y]):
             state.board[kx][y] = 0
     except(IndexError): pass
     return state
@@ -295,49 +297,57 @@ def freezer_capture(state, x, y):
 
 def leaper_capture(state, x, y, i, j):
     try:
-        state.board[x+2*i][y+2*j] = state.board[x][y]
-        state.board[x][y] = 0
-        state.board[x+i][y+j] = 0
+        if who(state.board[x+i][y+j]) != who(state.board[x][y]) \
+                and state.board[x+i][y+j] != 0:
+            state.board[x+2*i][y+2*j] = state.board[x][y]
+            state.board[x][y] = 0
+            state.board[x+i][y+j] = 0
     except(IndexError): pass
     return state   
 
 def imitator_capture(state, x, y, x0, y0, i, j):
     captures = [state.__copy__()]
+    # imitate pincher
+    for i, j in vec[0:4]:
+        try:
+            if who(state.board[x+i][y+j]) != who(state.board[x][y]) \
+                    and state.board[x+2*i][y+2*j] - state.whose_move == INIT_TO_CODE['P']:
+                state.board[x+i][y+j] = 0
+        except(IndexError): pass
     # imitate withdrawer
     try:
-        if state.board[x0-i][y0-j] + state.whose_move == INIT_TO_CODE['W']:
+        if state.board[x0-i][y0-j] - state.whose_move == INIT_TO_CODE['W']:
             state.board[x0-i][y0-j] = 0
     except(IndexError): pass
-    kx, ky = state.kingPos[state.whose_move]
     # imitate coordinator
+    kx, ky = state.kingPos[state.whose_move]
     try:
-        if who(state.board[x][ky]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[x][ky]):
             state.board[x][ky] = 0
-        if who(state.board[kx][y]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[kx][y]):
             state.board[kx][y] = 0
     except(IndexError): pass
-    try:
-        state.board[x][y] == None
-    except: pass
     return state
 
 def withdrawer_capture(state, x, y):
     try: state.board[x][y] = 0
-    except: pass
+    except(IndexError): pass
     return state
 
 def king_capture(state, x, y, x1, y1):
     try:
-        state.board[x1][y1] = state.board[x][y]
-        state.board[x][y] = 0
-        state.kingPos[state.whose_move] = (x1, y1)
-    except: pass
+        if who(state.board[x1][y1]) != state.whose_move \
+                and state.board[x1][y1] != 0:
+            state.board[x1][y1] == state.board[x][y]
+            state.board[x][y] = 0
+            state.kingPos[state.whose_move] = (x1, y1)
+    except(IndexError): pass
     return state
 
 
 if __name__ == "__main__":
     print("Main Method called")
-    state = State(old_board=INITIAL_2, whose_move=BLACK)
+    state = State(old_board=INITIAL_2)
     print(state)
 
     now = datetime.now()
