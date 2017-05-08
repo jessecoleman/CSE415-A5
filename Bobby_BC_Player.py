@@ -5,6 +5,7 @@ Baroque Chess.
 '''
 import time
 from datetime import datetime, timedelta
+import math
 
 # GLOBAL VARIABLES
 BEST_STATE = None
@@ -14,8 +15,8 @@ TIME_LIMIT_OFFSET = 0.01
 def makeMove(currentState, currentRemark, timelimit):
     now = datetime.now()
     global BEST_STATE
-    newMoveDesc = 'No move'
-    newRemark = "I don't even know how to move!"
+    newMoveDesc = 'I moved!'
+    newRemark = "Your turn!"
     
     # search for 10 seconds
     c_state = State(currentState.board, currentState.whose_move)
@@ -35,21 +36,22 @@ def prepare(player2Nickname):
     pass
 
 
-piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-10,10,2,2]
+piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-100,100,2,2]
 
 def static_eval(state):
     return sum([sum([piece_vals[j] for j in i]) for i in state.board])
 
 
 def iter_deep_search(currentState, endTime):
-    #return currentState
     depth = 0
+    best = None
     while datetime.now() < endTime:
         depth += 1
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
 
-        best_state, best_eval = minimax(currentState, depth, opt, endTime)
+        best_state, best_eval = minimax(currentState, depth, opt, endTime,
+                                        -math.inf, math.inf)
 
         if best_state != None:
             best = best_state
@@ -65,8 +67,7 @@ def is_over_time(endTime):
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
 
-def minimax(state, depth, opt, endTime):
-
+def minimax(state, depth, opt, endTime, alpha, beta):
     # Time check
     if is_over_time(endTime):
             return (None, 0)
@@ -83,7 +84,6 @@ def minimax(state, depth, opt, endTime):
             piece = board[x][y]
             # if current player is the same color as the piece get all child states
             if piece != 0 and who(piece) == state.whose_move:
-                print(x, y)
                 child_states += move(state, x, y)
 
     best_eval = 0
@@ -91,15 +91,26 @@ def minimax(state, depth, opt, endTime):
     for c_state in child_states:
         # Time check
         if is_over_time(endTime):
-            return (None, 0)
+            break
 
-        new_state, new_eval = minimax(c_state, depth-1, -opt, endTime)
+        # check alpha beta for invalid state
+        if alpha >= beta and best != None:
+            break
+
+        new_state, new_eval = minimax(c_state, depth-1, -opt, endTime, alpha, beta)
         if best == None:
             best = new_state
             best_eval = new_eval
         elif new_eval > opt*best_eval:
             best_eval = new_eval
             best = c_state
+
+        if opt == 1:
+            # set alpha
+            alpha = max(alpha, new_eval)
+        else:
+            # set beta
+            beta = min(beta, new_eval)
 
     return (best, best_eval)
 
@@ -242,9 +253,9 @@ def move(state, xPos, yPos):
             elif piece_t == INIT_TO_CODE['k']:
                 child_states.append(king_capture(off, x, y, x+i, y+i))
             if not child_states[-1].__eq__(defense): child_states.append(defense)
-    for i in child_states:
-        print(i)
-        time.sleep(.25)
+    # for i in child_states:
+    #     print(i)
+    #     time.sleep(.25)
     return child_states
 
 def pincher_capture(state, x, y):
@@ -319,11 +330,10 @@ def king_capture(state, x, y, x1, y1):
 
 
 if __name__ == "__main__":
-    print("Main Method called")
     state = State()
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 30))
+    new_state = iter_deep_search(state, now + timedelta(0, 10))
 
     print(new_state)
