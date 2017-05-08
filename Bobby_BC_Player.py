@@ -42,7 +42,6 @@ piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 def static_eval(state):
     return sum([sum([piece_vals[j] for j in i]) for i in state.board])
 
-
 def iter_deep_search(currentState, endTime):
     depth = 0
     best = None
@@ -50,7 +49,6 @@ def iter_deep_search(currentState, endTime):
         depth += 1
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
-
         best_state = minimax(currentState, depth, opt, endTime)
 
         if best_state != None:
@@ -59,7 +57,6 @@ def iter_deep_search(currentState, endTime):
             break
 
     return best
-
 
 def is_over_time(endTime):
     global TIME_LIMIT_OFFSET
@@ -101,8 +98,8 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             best = new_state
             best_eval = new_eval
         elif new_eval > opt*best_eval:
-            best_eval = new_eval
             best = c_state
+            best_eval = new_eval
 
         if opt == 1:
             # set alpha
@@ -110,7 +107,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         else:
             # set beta
             beta = min(beta, new_eval)
-
 
     return (best, best_eval)
 
@@ -124,20 +120,19 @@ def minimax(state, depth, opt, endTime):
         if is_over_time(endTime):
             break
 
-        new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime, -math.inf, math.inf)
+        new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime,
+                -math.inf, math.inf)
         if best == None or best_eval < new_eval:
             best = c_state
             best_eval = new_eval
 
     return best
 
-
 def get_child_states(state):
     board = state.board
     child_states = []
     for x in range(0, len(board)):
         for y in range(0, len(board)):
-            # print(depth, opt, x, y)
             # Get current piece number
             piece = board[x][y]
             # if current player is the same color as the piece get all child states
