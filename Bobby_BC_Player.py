@@ -6,6 +6,7 @@ Baroque Chess.
 import time
 from datetime import datetime, timedelta
 import math
+import heapq
 
 # GLOBAL VARIABLES
 BEST_STATE = None
@@ -36,7 +37,7 @@ def prepare(player2Nickname):
     pass
 
 
-piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-2,2,-100,100,2,2]
+piece_vals = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 
 def static_eval(state):
     return sum([sum([piece_vals[j] for j in i]) for i in state.board])
@@ -72,7 +73,8 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     # base case
     if depth == 0:
-        return (state, static_eval(state))
+        eval = static_eval(state)
+        return (state, eval)
 
     board = state.board
     child_states = get_child_states(state)
@@ -80,9 +82,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     best = None
     best_eval = 0
     for c_state in child_states:
-        if c_state.__eq__(INITIAL_2_SOLUTION):
-            print("Found correct soulution")
-        # time.sleep(0.1)
+        # time.sleep(0.25)
         # print("parent: ")
         # print(state)
         # print("child: ")
@@ -92,7 +92,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             break
 
         # check alpha beta for invalid state
-        if alpha >= beta and best != None:
+        if alpha >= beta:
             break
 
         new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
@@ -110,6 +110,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         else:
             # set beta
             beta = min(beta, new_eval)
+
 
     return (best, best_eval)
 
@@ -181,27 +182,26 @@ f l i w k i l c
 ''')
 
 INITIAL_2 = parse('''
+- - - - - - k -
+- C - - - - - -
+p - - - - - - -
+- - - - - - - -
+- - - - - - - p
 - - - - - - - -
 - - - - - - - -
-- - - K p - - -
-- - - - - - - -
-- - - - - - - -
-- - p - - - - -
-- - - - - - - -
-- - - - - - - k
+- - - p - - - K
 ''')
 
-INITIAL_2_SOLUTION = parse('''
-- - - - - - - -
-- - - - - - - -
-- - p - p - - -
-- - - - - - - -
+INITIAL_3 = parse('''
+- - - - - - k -
 - - - - - - - -
 - - - - - - - -
 - - - - - - - -
-- - - - - - - k
+- - - - - - K p
+- - - - - p - -
+- - - - - - - -
+- - - - - - - -
 ''')
-
 def king_search(board):
     wKingPiece = None
     bKingPiece = None
@@ -255,6 +255,13 @@ class State:
             return True
         return False
 
+    def __lt__(self, other):
+        if self.whose_move == WHITE:
+           lt = static_eval(self) > static_eval(other)
+        else:
+            lt = static_eval(self) < static_eval(other)
+        return lt
+
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
 def move(state, xPos, yPos):
@@ -280,6 +287,9 @@ def move(state, xPos, yPos):
                 and state.board[x+i][y+j] == 0:
             x += i
             y += j
+            # king only moves one space
+            if piece_t == INIT_TO_CODE['k'] \
+                    and (abs(x-xPos) > 1 or abs(y-yPos) > 1): break
             # non-aggressive move
             defense = state.__copy__()
             defense.whose_move = 1 - defense.whose_move
@@ -304,12 +314,11 @@ def move(state, xPos, yPos):
                 child_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
-                child_states.append(withdrawer_capture(off, xPos-i, yPos-i))
+                child_states.append(withdrawer_capture(off, xPos-i, yPos-j))
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
-                child_states.append(king_capture(off, x, y, x+i, y+i))
-            if not child_states[-1].__eq__(defense) \
-                    and not child_states[-1].__eq__(state):
+                child_states.append(king_capture(off, x, y, x+i, y+j))
+            if not child_states[-1].__eq__(defense):
                 child_states.append(defense)
     return child_states
 
@@ -328,9 +337,9 @@ def coordinator_capture(state, x, y):
     kx, ky = state.kingPos[state.whose_move]
     # try to coordinate with king to capture
     try:
-        if who(state.board[x][ky]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[x][ky]):
             state.board[x][ky] = 0
-        if who(state.board[kx][y]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[kx][y]):
             state.board[kx][y] = 0
     except(IndexError): pass
     return state
@@ -344,52 +353,59 @@ def freezer_capture(state, x, y):
 
 def leaper_capture(state, x, y, i, j):
     try:
-        state.board[x+2*i][y+2*j] = state.board[x][y]
-        state.board[x][y] = 0
-        state.board[x+i][y+j] = 0
+        if who(state.board[x+i][y+j]) != who(state.board[x][y]) \
+                and state.board[x+i][y+j] != 0:
+            state.board[x+2*i][y+2*j] = state.board[x][y]
+            state.board[x][y] = 0
+            state.board[x+i][y+j] = 0
     except(IndexError): pass
     return state   
 
 def imitator_capture(state, x, y, x0, y0, i, j):
     captures = [state.__copy__()]
+    # imitate pincher
+    for i, j in vec[0:4]:
+        try:
+            if who(state.board[x+i][y+j]) != who(state.board[x][y]) \
+                    and state.board[x+2*i][y+2*j] - state.whose_move == INIT_TO_CODE['P']:
+                state.board[x+i][y+j] = 0
+        except(IndexError): pass
     # imitate withdrawer
     try:
-        if state.board[x0-i][y0-j] + state.whose_move == INIT_TO_CODE['W']:
+        if state.board[x0-i][y0-j] - state.whose_move == INIT_TO_CODE['W']:
             state.board[x0-i][y0-j] = 0
     except(IndexError): pass
-    kx, ky = state.kingPos[state.whose_move]
     # imitate coordinator
+    kx, ky = state.kingPos[state.whose_move]
     try:
-        if who(state.board[x][ky]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[x][ky]):
             state.board[x][ky] = 0
-        if who(state.board[kx][y]) != state.whose_move:
+        if who(state.board[x][y]) != who(state.board[kx][y]):
             state.board[kx][y] = 0
     except(IndexError): pass
-    try:
-        state.board[x][y] == None
-    except: pass
     return state
 
 def withdrawer_capture(state, x, y):
     try: state.board[x][y] = 0
-    except: pass
+    except(IndexError): pass
     return state
 
 def king_capture(state, x, y, x1, y1):
     try:
-        state.board[x1][y1] = state.board[x][y]
-        state.board[x][y] = 0
-        state.kingPos[state.whose_move] = (x1, y1)
-    except: pass
+        if who(state.board[x1][y1]) != state.whose_move \
+                and state.board[x1][y1] != 0:
+            state.board[x1][y1] == state.board[x][y]
+            state.board[x][y] = 0
+            state.kingPos[state.whose_move] = (x1, y1)
+    except(IndexError): pass
     return state
 
 
 if __name__ == "__main__":
-
-    state = State(old_board=INITIAL_2, whose_move=BLACK)
+    state = State(old_board=INITIAL_2)
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 8))
+    new_state = iter_deep_search(state, now + timedelta(0, 18))
 
     print(new_state)
