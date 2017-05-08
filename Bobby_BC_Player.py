@@ -338,112 +338,113 @@ def pincher_capture(state, x, y):
     piece = state.board[x][y]
     # search surrounding spaces to look for a capture
     for i, j in vec[0:4]:
-        try:
-            if who(state.board[x+i][y+j]) != who(piece) \
-                    and state.board[x+2*i][y+2*j] == piece:
-                state.board[x+i][y+j] = 0
-        except(IndexError): pass
+        if is_on_board(x, y) and is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
+                and who(state.board[x+i][y+j]) != who(piece) \
+                and state.board[x+2*i][y+2*j] == piece:
+            state.board[x+i][y+j] = 0
     return state
 
 def coordinator_capture(state, x, y):
     kx, ky = state.kingPos[state.whose_move]
     # try to coordinate with king to capture
-    try:
-        if who(state.board[x][y]) != who(state.board[x][ky]):
-            state.board[x][ky] = 0
-        if who(state.board[x][y]) != who(state.board[kx][y]):
-            state.board[kx][y] = 0
-    except(IndexError): pass
+    if is_on_board(x,y) and is_on_board(x, ky)\
+            and who(state.board[x][y]) != who(state.board[x][ky]):
+        state.board[x][ky] = 0
+    if is_on_board(x,y) and is_on_board(kx, y)\
+            and who(state.board[x][y]) != who(state.board[kx][y]):
+        state.board[kx][y] = 0
     return state
 
 def freezer_capture(state, x, y):
     state.frozen[state.whose_move] = []
     for i, j in vec:
-        if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
+        if is_on_board(x+i, y+j):
             state.frozen[state.whose_move].append((x+i,y+j))
     return state
 
 def leaper_capture(state, x, y, i, j):
-    try:
-        if who(state.board[x+i][y+j]) != who(state.board[x][y]) \
-                and state.board[x+i][y+j] != 0:
-            state.board[x+2*i][y+2*j] = state.board[x][y]
-            state.board[x][y] = 0
-            state.board[x+i][y+j] = 0
-    except(IndexError): pass
-    return state   
+    if is_on_board(x,y) and is_on_board(x+i, y+j) and is_on_board(x+2*i,y+2*j)\
+            and who(state.board[x+i][y+j]) != who(state.board[x][y]) \
+            and state.board[x+i][y+j] != 0:
+        state.board[x+2*i][y+2*j] = state.board[x][y]
+        state.board[x][y] = 0
+        state.board[x+i][y+j] = 0
+    return state
 
 def imitator_capture(state, x, y, x0, y0, i, j):
     captures = [state.__copy__()]
-    # imitate pincher
-    p_cap = state.__copy__()
-    for i, j in vec[0:4]:
-        try:
-            if who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['P'] \
+    if is_on_board(x,y):
+        # imitate pincher
+        p_cap = state.__copy__()
+        for i, j in vec[0:4]:
+            if is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
+                    and who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['P'] \
                     and state.board[x+2*i][y+2*j] - state.whose_move == INIT_TO_CODE['P']:
                 p_cap.board[x+i][y+j] = 0
                 captures.append(p_cap)
-        except(IndexError): pass
-    # imitate coordinator
-    kx, ky = state.kingPos[state.whose_move]
-    try:
+
+        # imitate coordinator
+        kx, ky = state.kingPos[state.whose_move]
         k_cap = state.__copy__()
-        if who(state.board[x][y]) != who(state.board[x][ky]) \
+        if is_on_board(x, ky) \
+                and who(state.board[x][y]) != who(state.board[x][ky]) \
                 and state.board[x][ky] - state.whose_move == INIT_TO_CODE['C']:
             k_cap.board[x][ky] = 0
-        if who(state.board[x][y]) != who(state.board[kx][y]) \
+        if is_on_board(kx, y)\
+                and who(state.board[x][y]) != who(state.board[kx][y]) \
                 and state.board[kx][y] - state.whose_move == INIT_TO_CODE['C']:
             k_cap.board[kx][y] = 0
         captures.append(k_cap)
-    except(IndexError): pass
-    # imitate leaper
-    try:
+
+        # imitate leaper
         l_cap = state.__copy__()
-        if state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['L']:
+        if is_on_board(x+i, y+j)\
+                and state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['L']:
             l_cap.board[x+2*i][y+2*j] = state.board[x][y]
             l_cap.board[x+i][y+j] = 0
             l_cap.board[x][y] = 0
             captures.append(l_cap)
-    except(IndexError): pass
-    # imitate freezer
-    f_cap = state.__copy__()
-    f_bool = False
-    for i, j in vec:
-        if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
-            if state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['F']:
-                f_bool = True
-            f_cap.frozen[state.whose_move].append((x + i,y + j))
-    if f_bool:
-        captures.append(f_cap)
-    # imitate withdrawer
-    try:
+
+        # imitate freezer
+        f_cap = state.__copy__()
+        f_bool = False
+        for i, j in vec:
+            if is_on_board(x+i, y+j):
+                if state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['F']:
+                    f_bool = True
+                f_cap.frozen[state.whose_move].append((x + i,y + j))
+        if f_bool:
+            captures.append(f_cap)
+
+        # imitate withdrawer
         w_cap = state.__copy__()
-        if state.board[x0-i][y0-j] + state.whose_move == INIT_TO_CODE['W']:
+        if is_on_board(x0-i, y0-j)\
+                and state.board[x0-i][y0-j] + state.whose_move == INIT_TO_CODE['W']:
             w_cap.board[x0-i][y0-j] = 0
             captures.append(w_cap)
-    except(IndexError): pass
-    # imitate king
-    try:
-        if state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['K']:
+
+        # imitate king
+        if is_on_board(x+i, y+j)\
+                and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['K']:
             state.board[x+i][y+j] = 0
-    except(IndexError): pass
     return state
 
 def withdrawer_capture(state, x, y):
-    try: state.board[x][y] = 0
-    except(IndexError): pass
+    if is_on_board(x, y):
+        state.board[x][y] = 0
     return state
 
 def king_capture(state, x, y, x1, y1):
-    try:
-        if who(state.board[x1][y1]) != state.whose_move \
-                and state.board[x1][y1] != 0:
-            state.board[x1][y1] == state.board[x][y]
-            state.board[x][y] = 0
-            state.kingPos[state.whose_move] = (x1, y1)
-    except(IndexError): pass
+    if is_on_board(x,y) and is_on_board(x1, y1)\
+            and who(state.board[x1][y1]) != state.whose_move \
+            and state.board[x1][y1] != 0:
+        state.board[x1][y1] == state.board[x][y]
+        state.board[x][y] = 0
+        state.kingPos[state.whose_move] = (x1, y1)
     return state
 
+def is_on_board(x,y):
+    return x >= 0 and y >= 0 and x <= 7 and y <= 7
 
 if __name__ == "__main__":
     state = State(old_board=INITIAL_2)
