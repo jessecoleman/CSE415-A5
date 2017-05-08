@@ -50,8 +50,7 @@ def iter_deep_search(currentState, endTime):
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
 
-        best_state, best_eval = minimax(currentState, depth, opt, endTime,
-                                        -math.inf, math.inf)
+        best_state = minimax(currentState, depth, opt, endTime)
 
         if best_state != None:
             best = best_state
@@ -66,29 +65,28 @@ def is_over_time(endTime):
     now = datetime.now()
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
-
-def minimax(state, depth, opt, endTime, alpha, beta):
+def minimax_helper(state, depth, opt, endTime, alpha, beta):
     # Time check
     if is_over_time(endTime):
-            return (None, 0)
+        return (None, 0)
 
     # base case
     if depth == 0:
         return (state, static_eval(state))
 
     board = state.board
-    child_states = []
-    for x in range(0, len(board)):
-        for y in range(0, len(board)):
-            # Get current piece number
-            piece = board[x][y]
-            # if current player is the same color as the piece get all child states
-            if piece != 0 and who(piece) == state.whose_move:
-                child_states += move(state, x, y)
+    child_states = get_child_states(state)
 
-    best_eval = 0
     best = None
+    best_eval = 0
     for c_state in child_states:
+        if c_state.__eq__(INITIAL_2_SOLUTION):
+            print("Found correct soulution")
+        # time.sleep(0.1)
+        # print("parent: ")
+        # print(state)
+        # print("child: ")
+        # print(c_state)
         # Time check
         if is_over_time(endTime):
             break
@@ -97,7 +95,8 @@ def minimax(state, depth, opt, endTime, alpha, beta):
         if alpha >= beta and best != None:
             break
 
-        new_state, new_eval = minimax(c_state, depth-1, -opt, endTime, alpha, beta)
+        new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
+                                      alpha, beta)
         if best == None:
             best = new_state
             best_eval = new_eval
@@ -113,6 +112,38 @@ def minimax(state, depth, opt, endTime, alpha, beta):
             beta = min(beta, new_eval)
 
     return (best, best_eval)
+
+def minimax(state, depth, opt, endTime):
+    child_states = get_child_states(state)
+
+    best = None
+    best_eval = 0
+    for c_state in child_states:
+        #check time
+        if is_over_time(endTime):
+            break
+
+        new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime, -math.inf, math.inf)
+        if best == None or best_eval < new_eval:
+            best = c_state
+            best_eval = new_eval
+
+    return best
+
+
+def get_child_states(state):
+    board = state.board
+    child_states = []
+    for x in range(0, len(board)):
+        for y in range(0, len(board)):
+            # print(depth, opt, x, y)
+            # Get current piece number
+            piece = board[x][y]
+            # if current player is the same color as the piece get all child states
+            if piece != 0 and who(piece) == state.whose_move:
+                child_states += move(state, x, y)
+
+    return child_states
 
 
 
@@ -145,8 +176,30 @@ p p p p p p p p
 - - - - - - - -
 - - - - - - - -
 - - - - - - - -
-P P P P P P P P
-F L I W K I L C
+p p p p p p p p
+f l i w k i l c
+''')
+
+INITIAL_2 = parse('''
+- - - - - - - -
+- - - - - - - -
+- - - K p - - -
+- - - - - - - -
+- - - - - - - -
+- - p - - - - -
+- - - - - - - -
+- - - - - - - k
+''')
+
+INITIAL_2_SOLUTION = parse('''
+- - - - - - - -
+- - - - - - - -
+- - p - p - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - k
 ''')
 
 def king_search(board):
@@ -167,7 +220,7 @@ def freezer_search(board, whose_move):
             if board[x][y] - who(board[x][y]) == INIT_TO_CODE['f']:
                 for i, j in vec:
                     if x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7:
-                        frozen[whose_move].append((x+i, y+j))
+                        frozen[who(board[x][y])].append((x+i, y+j))
     return frozen
 
 class State:
@@ -177,10 +230,7 @@ class State:
         if len(kingPos) == 0: self.kingPos = king_search(old_board)
         else: self.kingPos = [(k[0], k[1]) for k in kingPos]
         if len(frozen) == 0: self.frozen = freezer_search(old_board, whose_move)
-        else:
-            self.frozen = []
-            self.frozen.append([(f[0], f[1]) for f in frozen[0]])
-            self.frozen.append([(f[0], f[1]) for f in frozen[1]])
+        else: self.frozen = [[(f[0], f[1]) for f in i] for i in frozen]
 
     def __repr__(self):
         s = ''
@@ -209,7 +259,13 @@ vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
 def move(state, xPos, yPos):
     # if piece is frozen by opponent's freezer
-    if (xPos, yPos) in state.frozen[1-state.whose_move]: return []
+    if (xPos, yPos) in state.frozen[1-state.whose_move]: 
+        # print("frozen")
+        # print(state)
+        # print("whose_move", state.whose_move)
+        # print(xPos, yPos)
+        # print(state.frozen)
+        return []
     child_states = []
     # get current piece
     piece = state.board[xPos][yPos]
@@ -252,10 +308,9 @@ def move(state, xPos, yPos):
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
                 child_states.append(king_capture(off, x, y, x+i, y+i))
-            if not child_states[-1].__eq__(defense): child_states.append(defense)
-    # for i in child_states:
-    #     print(i)
-    #     time.sleep(.25)
+            if not child_states[-1].__eq__(defense) \
+                    and not child_states[-1].__eq__(state):
+                child_states.append(defense)
     return child_states
 
 def pincher_capture(state, x, y):
@@ -330,10 +385,11 @@ def king_capture(state, x, y, x1, y1):
 
 
 if __name__ == "__main__":
-    state = State()
+
+    state = State(old_board=INITIAL_2, whose_move=BLACK)
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 10))
+    new_state = iter_deep_search(state, now + timedelta(0, 8))
 
     print(new_state)
