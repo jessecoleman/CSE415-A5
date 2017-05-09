@@ -13,6 +13,17 @@ import random
 BEST_STATE = None
 TIME_LIMIT_OFFSET = 0.01
 
+BLACK = 0
+WHITE = 1
+
+INIT_TO_CODE = {'p': 2, 'P': 3, 'c': 4, 'C': 5, 'l': 6, 'L': 7, 'i': 8, 'I': 9,
+                'w': 10, 'W': 11, 'k': 12, 'K': 13, 'f': 14, 'F': 15, '-': 0}
+
+CODE_TO_INIT = {0: '-', 2: 'p', 3: 'P', 4: 'c', 5: 'C', 6: 'l', 7: 'L', 8: 'i', 9: 'I',
+                10: 'w', 11: 'W', 12: 'k', 13: 'K', 14: 'f', 15: 'F'}
+
+PIECE_VALS = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
+
 # initialize zobrist table
 random.seed(10)
 ZOBRIST_N = [[0]*14]*64
@@ -71,6 +82,10 @@ def is_over_time(endTime):
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
 def minimax_helper(state, depth, opt, endTime, alpha, beta):
+    global ZOBRIST_M
+    time.sleep(.2)
+    print("child")
+    print(state)
     # Time check
     if is_over_time(endTime):
         return (None, 0)
@@ -81,16 +96,36 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         return (state, eval)
 
     board = state.board
-    child_states = get_child_states(state)
+    child_states = []
+    s = None
+    h = z_hash(board)
+    try: 
+        s = ZOBRIST_M[h]
+    except:
+        s = z_node(state, z_hash(board))
+    if len(s.children) == 0:
+        child_states = get_child_states(state)
+        for c in child_states:
+            h1 = z_hash(c.board)
+            s.children.append(h1)
+            ZOBRIST_M[h1] = z_node(c, static_eval(c)) 
+        ZOBRIST_M[h] = s 
+    else:
+        for c in s.children:
+            child_states.append(ZOBRIST_M[c].state)
+    
+    heapq.heapify(child_states)
 
     best = None
     best_eval = 0
-    for c_state in child_states:
-        time.sleep(0.25)
-        print("parent: ")
-        print(state)
-        print("child: ")
-        print(c_state)
+
+    while len(child_states) != 0:
+        c_state = heapq.heappop(child_states)
+        # time.sleep(0.25)
+        # print("parent: ")
+        # print(state)
+        # print("child: ")
+        # print(c_state)
         # Time check
         if is_over_time(endTime):
             break
@@ -147,16 +182,6 @@ def get_child_states(state):
                 child_states += move(state, x, y)
 
     return child_states
-
-
-BLACK = 0
-WHITE = 1
-
-INIT_TO_CODE = {'p': 2, 'P': 3, 'c': 4, 'C': 5, 'l': 6, 'L': 7, 'i': 8, 'I': 9,
-                'w': 10, 'W': 11, 'k': 12, 'K': 13, 'f': 14, 'F': 15, '-': 0}
-
-CODE_TO_INIT = {0: '-', 2: 'p', 3: 'P', 4: 'c', 5: 'C', 6: 'l', 7: 'L', 8: 'i', 9: 'I',
-                10: 'w', 11: 'W', 12: 'k', 13: 'K', 14: 'f', 15: 'F'}
 
 def who(piece): return piece % 2
 
@@ -225,7 +250,7 @@ def freezer_search(board, whose_move):
                         frozen[who(board[x][y])].append((x+i, y+j))
     return frozen
 
-def zhash(board):
+def z_hash(board):
     global ZOBRIST_N
     val = 0
     for x in range(8):
