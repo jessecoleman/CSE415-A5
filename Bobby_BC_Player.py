@@ -27,9 +27,16 @@ PIECE_VALS = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 # initialize zobrist table
 random.seed(10)
 ZOBRIST_N = [[0]*14]*64
+ZOBRIST_M = {}
 for x in range(64):
     for y in range(14):
         ZOBRIST_N[x][y] = random.randint(0, 2**64)
+
+class z_node:
+    def __init__(self, state, static_eval, children=[]):
+        self.state = state
+        self.static_eval = static_eval
+        self.children = children
 
 def makeMove(currentState, currentRemark, timelimit):
     now = datetime.now()
