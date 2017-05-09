@@ -27,12 +27,14 @@ PIECE_VALS = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 PAST_MOVE = [-1, -1, -1] # Piece, x, y
 
 # initialize zobrist table
-random.seed(10)
-ZOBRIST_N = [[0]*14]*64
+ZOBRIST_N = []
 ZOBRIST_M = {}
+random.seed(0)
 for x in range(64):
-    for y in range(14):
-        ZOBRIST_N[x][y] = random.randint(0, 2**64)
+    ZOBRIST_N.append([])
+    for y in range(16):
+        ZOBRIST_N[x].append(random.randint(0, 2**64))
+
 
 class z_node:
     def __init__(self, state, children=[]):
@@ -86,10 +88,12 @@ def iter_deep_search(currentState, endTime):
     best = None
     while datetime.now() < endTime:
         depth += 1
-        # print(depth)
+        print("depth", depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
+        print("***************BEST STATE*************")
+        print(best_state)
 
         if best_state != None:
             best = best_state
@@ -108,10 +112,9 @@ def is_over_time(endTime):
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
 def minimax_helper(state, depth, opt, endTime, alpha, beta):
+    time.sleep(0.2)
     global ZOBRIST_M
-    # time.sleep(.2)
-    # print("child")
-    # print(state)
+
     # Time check
     if is_over_time(endTime):
         return None
@@ -121,23 +124,44 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         state.static_eval()
         return state
 
+    #print("RECURSE")
+    #print("current state: \n", state)
+
+    state.static_eval()
     board = state.board
     child_states = []
     s = None
     h = z_hash(board)
+    print(h)
+    print(state)
+    time.sleep(0.1)
     try: 
         s = ZOBRIST_M[h]
+        #print("FOUND")
+        if depth==1: 
+            pass
+            #print(h)
+            #print(state)
     except:
         s = z_node(state)
+        print("*****************CREATED*****************")
     if len(s.children) == 0:
+        #print("CHILDREN EMPTY")
         child_states = get_child_states(state, h)
         for c in child_states:
             h1 = z_hash(c.board)
             s.children.append(h1)
-            ZOBRIST_M[h1] = z_node(c) 
+            try:
+                print("FOUND HERE")
+                #print(ZOBRIST_M[h1].state)
+            except:
+                print("ADDING TO MAP")
+            #ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
+        #print("CHILDREN FOUND")
         for c in s.children:
+            #print(ZOBRIST_M[c].state)
             child_states.append(ZOBRIST_M[c].state)
     
     heapq.heapify(child_states)
@@ -147,6 +171,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
+        #print(c_state)
         # print("***********heap***********")
         # print(static_eval(c_state))
         # print(c_state)
@@ -164,6 +189,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         if alpha > beta:
             break
 
+        #print("TESTING")
         new_state = minimax_helper(c_state, depth-1, -opt, endTime,
                 alpha, beta)
         if new_state != None:
@@ -188,6 +214,8 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     return best
 
 def minimax(state, depth, opt, endTime):
+
+
     h = z_hash(state.board)
     child_states = []
     try:
@@ -196,24 +224,40 @@ def minimax(state, depth, opt, endTime):
         s = z_node(state)
     if len(s.children) == 0:
         child_states = get_child_states(state, h)
+        #print("COMPUTED CHILDREN")
         for c in child_states:
-            # print(c)
             h1 = z_hash(c.board)
             s.children.append(h1)
             ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
+        #print("FOUND CHILDREN")
         for c in s.children:
             child_states.append(ZOBRIST_M[c].state)
+
+    heapq.heapify(child_states)
 
     best = None
     best_eval = 0
     alpha = -math.inf
     beta = math.inf
 
-    print(child_states)
-    time.sleep(100)
-    for c_state in child_states:
+
+    print("\n\n")
+    for i, j in ZOBRIST_M.items():
+        print("DICTIONARY")
+        print(i)
+        print(j.state)
+        print("CHILDREN")
+        for m in j.children:
+            print(m)
+        print("\n")
+    print("\n\n")
+
+
+    while len(child_states) != 0:
+        c_state = heapq.heappop(child_states)
+        
         #check time
         if is_over_time(endTime):
             best = None
@@ -282,14 +326,14 @@ F L I W K I L C
 ''')
 
 INITIAL_2 = parse('''
-- k - - - - - -
+k - - - - - - -
 - - - - - - - -
 - - - - - - - -
 - - - - - - - -
-- I - - - - - -
 - - - - - - - -
 - - - - - - - -
-- - c - - - K -
+- - - - - - - -
+- - - - - - - K
 ''')
 
 INITIAL_3 = parse('''
@@ -325,13 +369,11 @@ def freezer_search(board, whose_move):
     return frozen
 
 def z_hash(board):
-    global ZOBRIST_N
     val = 0
     for x in range(8):
         for y in range(8):
-            piece = None
-            piece = who(board[x][y])
-            if(piece != None):
+            piece = board[x][y]
+            if piece != 0:
                 val ^= ZOBRIST_N[8*x+y][piece]
     return val
 
@@ -600,6 +642,7 @@ def king_capture(state, x, y, x1, y1, z_h):
         state.board[x][y] = 0
         state.kingPos[state.whose_move] = (x1, y1)
     state.static_eval()
+    print("New KING", z_h)
     ZOBRIST_M[z_h] = z_node(state)
     return state
 
@@ -607,8 +650,9 @@ def is_on_board(x,y):
     return x >= 0 and y >= 0 and x <= 7 and y <= 7
 
 if __name__ == "__main__":
-    state = State(old_board=INITIAL_3, whose_move=BLACK)
+    state = State(old_board=INITIAL_2, whose_move=BLACK)
     print(state)
+    print(z_hash(state.board))
 
     now = datetime.now()
     new_state = iter_deep_search(state, now + timedelta(0, 10))
