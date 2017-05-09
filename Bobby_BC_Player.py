@@ -128,18 +128,15 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     child_states = []
     s = None
     h = z_hash(board)
-    # print(h)
-    # print(state)
-    time.sleep(0.1)
     try: 
         s = ZOBRIST_M[h]
     except:
         s = z_node(state)
-        print("*****************CREATED*****************")
     if len(s.children) == 0:
         child_states = get_child_states(state, h)
         for c in child_states:
             h1 = z_hash(c.board)
+            if depth==1: print("pincher", h1)
             s.children.append(h1)
             ZOBRIST_M[h1] = z_node(c)
         ZOBRIST_M[h] = s
@@ -156,14 +153,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
-        # print("***********heap***********")
-        # print(static_eval(c_state))
-        # print(c_state)
-        # print("parent: ")
-        # print(state)
-        # print("child: ")
-        # print(c_state)
-        # time.sleep(0.25)
 
         # Time check
         if is_over_time(endTime):
@@ -209,17 +198,13 @@ def minimax(state, depth, opt, endTime):
         s = z_node(state)
     if len(s.children) == 0:
         child_states = get_child_states(state, h)
-        #print("COMPUTED CHILDREN")
         for c in child_states:
-            ##print("CHILD")
-            #print(c)
             h1 = z_hash(c.board)
             s.children.append(h1)
             c.static_eval()
             ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
-        #print("FOUND CHILDREN")
         for c in s.children:
             child_states.append(ZOBRIST_M[c].state)
 
@@ -303,11 +288,11 @@ F L I W K I L C
 INITIAL_2 = parse('''
 k - - - - - - -
 - - - - - - - -
-- - - - p - l -
-- c - - - - - -
+- - - - - - p -
 - - - - - - - -
-- C - - - - - -
-- - - - P - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
 - - - - - - - K
 ''')
 
@@ -400,7 +385,7 @@ class State:
 
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
-def move(state, z_h, xPos, yPos):
+def move(state, zobrist_h, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
         # print("frozen")
@@ -418,7 +403,6 @@ def move(state, z_h, xPos, yPos):
     # loop through directions
     directions = vec[0:4] if piece_t == INIT_TO_CODE['p'] else vec
     for i, j in directions:
-
         x = xPos
         y = yPos
         # don't move pieces off the board or into another piece
@@ -442,6 +426,7 @@ def move(state, z_h, xPos, yPos):
             # pick up piece for move
             c_state.board[xPos][yPos] = 0
             c_state.board[x][y] = piece
+            z_h = zobrist_h
             z_h ^= ZOBRIST_N[8*xPos+yPos][c_state.board[xPos][yPos]]
             z_h ^= ZOBRIST_N[8*x+y][c_state.board[x][y]]
             if piece_t == INIT_TO_CODE['p']:
@@ -485,6 +470,7 @@ def pincher_capture(state, x, y, z_h):
             state.board[x+i][y+j] = 0
     state.static_eval()
     ZOBRIST_M[z_h] = z_node(state)
+    print("pincher hash", z_h)
     return state
 
 def coordinator_capture(state, x, y, z_h):
@@ -560,7 +546,6 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
         if k_bool:
             captures.append(k_cap)
 
-
         # imitate freezer
         f_cap = state.__copy__()
         f_bool = False
@@ -613,7 +598,6 @@ def is_on_board(x,y):
 if __name__ == "__main__":
     state = State(old_board=INITIAL_2, whose_move=BLACK)
     print(state)
-    # print(z_hash(state.board))
 
     now = datetime.now()
     new_state = iter_deep_search(state, now + timedelta(0, 10))
