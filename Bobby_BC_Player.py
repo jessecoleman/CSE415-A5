@@ -88,14 +88,11 @@ def iter_deep_search(currentState, endTime):
     best = None
     while datetime.now() < endTime:
         depth += 1
-        print("depth", depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
-        # print("***************BEST STATE*************")
-        # print(best_state)
 
-        if best_state != None:
+        if best_state != None and best_state != currentState:
             best = best_state
         else:
             break
@@ -136,14 +133,11 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         child_states = get_child_states(state, h)
         for c in child_states:
             h1 = z_hash(c.board)
-            if depth==1: print("pincher", h1)
             s.children.append(h1)
             ZOBRIST_M[h1] = z_node(c)
         ZOBRIST_M[h] = s
     else:
-        #print("CHILDREN FOUND")
         for c in s.children:
-            #print(ZOBRIST_M[c].state)
             child_states.append(ZOBRIST_M[c].state)
     
     heapq.heapify(child_states)
@@ -162,7 +156,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         if alpha > beta:
             break
 
-        #print("TESTING")
         new_state = minimax_helper(c_state, depth-1, -opt, endTime,
                 alpha, beta)
         if new_state != None:
@@ -187,7 +180,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     return best
 
 def minimax(state, depth, opt, endTime):
-
 
     h = z_hash(state.board)
     child_states = []
@@ -388,11 +380,6 @@ vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 def move(state, zobrist_h, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
-        # print("frozen")
-        # print(state)
-        # print("whose_move", state.whose_move)
-        # print(xPos, yPos)
-        # print(state.frozen)
         return []
     child_states = []
     # get current piece
@@ -470,7 +457,6 @@ def pincher_capture(state, x, y, z_h):
             state.board[x+i][y+j] = 0
     state.static_eval()
     ZOBRIST_M[z_h] = z_node(state)
-    print("pincher hash", z_h)
     return state
 
 def coordinator_capture(state, x, y, z_h):
