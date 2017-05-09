@@ -88,12 +88,12 @@ def iter_deep_search(currentState, endTime):
     best = None
     while datetime.now() < endTime:
         depth += 1
-        print("depth", depth)
+        # print("depth", depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
-        print("***************BEST STATE*************")
-        print(best_state)
+        # print("***************BEST STATE*************")
+        # print(best_state)
 
         if best_state != None:
             best = best_state
@@ -112,7 +112,6 @@ def is_over_time(endTime):
     return (now + timedelta(0, TIME_LIMIT_OFFSET)) >= endTime
 
 def minimax_helper(state, depth, opt, endTime, alpha, beta):
-    time.sleep(0.2)
     global ZOBRIST_M
 
     # Time check
@@ -132,8 +131,8 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     child_states = []
     s = None
     h = z_hash(board)
-    print(h)
-    print(state)
+    # print(h)
+    # print(state)
     time.sleep(0.1)
     try: 
         s = ZOBRIST_M[h]
@@ -243,18 +242,20 @@ def minimax(state, depth, opt, endTime):
     beta = math.inf
 
 
-    print("\n\n")
-    for i, j in ZOBRIST_M.items():
-        print("DICTIONARY")
-        print(i)
-        print(j.state)
-        print("CHILDREN")
-        for m in j.children:
-            print(m)
-        print("\n")
-    print("\n\n")
+    # print("\n\n")
+    # for i, j in ZOBRIST_M.items():
+    #     print("DICTIONARY")
+    #     print(i)
+    #     print(j.state)
+    #     print("CHILDREN")
+    #     for m in j.children:
+    #         print(m)
+    #     print("\n")
+    # print("\n\n")
 
 
+    print(child_states)
+    time.sleep(100)
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
         
@@ -339,12 +340,12 @@ k - - - - - - -
 INITIAL_3 = parse('''
 - - - - - - - -
 - - - P - - - -
-- - P P P - P -
-- P P i K P p P
-- - P P P - P -
+- - P P P P P -
+- P P i - P p P
+- - P P P P P -
 - - - P - - - -
 - - - - - - - -
-- - - - - - - k
+K - - - - - - k
 ''')
 
 def king_search(board):
@@ -448,7 +449,7 @@ def move(state, z_h, xPos, yPos):
         y = yPos
         # don't move pieces off the board or into another piece
         while x+i >= 0 and y+j >= 0 and x+i <= 7 and y+j <= 7 \
-                and (state.board[x+i][y+j] == 0 or piece_t == INIT_TO_CODE["i"] \
+                and (state.board[x+i][y+j] == 0\
                 or piece_t == INIT_TO_CODE["k"]):
             x += i
             y += j
@@ -556,68 +557,75 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
 
     captures = []
     if is_on_board(x,y):
-        # imitate pincher
+        # # imitate pincher
         p_cap = state.__copy__()
         for i, j in vec[0:4]:
             if is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
-                    and who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['p'] \
-                    and state.board[x+2*i][y+2*j] + state.whose_move == INIT_TO_CODE['P'] \
-                    and state.board[x][y] == 0:
+                    and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['p'] \
+                    and state.board[x+2*i][y+2*j] + state.whose_move == INIT_TO_CODE['P']:
                 p_cap.board[x+i][y+j] = 0
                 captures.append(p_cap)
+                print("imi pinch capture")
 
         # imitate coordinator
         kx, ky = state.kingPos[state.whose_move]
         k_cap = state.__copy__()
         k_bool = False
+        print(state.board[x][ky], state.whose_move, INIT_TO_CODE['c'])
         if is_on_board(x, ky) \
                 and who(state.board[x][y]) != who(state.board[x][ky]) \
-                and state.board[x][ky] - state.whose_move == INIT_TO_CODE['C']:
+                and state.board[x][ky] - state.whose_move == INIT_TO_CODE['c']:
             k_cap.board[x][ky] = 0
             k_bool = True
         if is_on_board(kx, y)\
                 and who(state.board[x][y]) != who(state.board[kx][y]) \
-                and state.board[kx][y] - state.whose_move == INIT_TO_CODE['C']:
+                and state.board[kx][y] - state.whose_move == INIT_TO_CODE['c']:
             k_cap.board[kx][y] = 0
             k_bool = True
 
         if k_bool:
             captures.append(k_cap)
+            print("imi coord capture")
 
         # imitate leaper
-        l_cap = state.__copy__()
-        if is_on_board(x+i, y+j)\
-                and state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['L']:
-            l_cap.board[x+2*i][y+2*j] = state.board[x][y]
-            l_cap.board[x+i][y+j] = 0
-            l_cap.board[x][y] = 0
-            captures.append(l_cap)
+        # TODO: Currently borken
+        # print(state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['l'])
+        # l_cap = state.__copy__()
+        # if is_on_board(x+i, y+j)\
+        #         and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['l']:
+        #     l_cap.board[x+2*i][y+2*j] = state.board[x][y]
+        #     l_cap.board[x+i][y+j] = 0
+        #     l_cap.board[x][y] = 0
+        #     captures.append(l_cap)
+        #     print("imi leap capture")
 
         # imitate freezer
         f_cap = state.__copy__()
         f_bool = False
         for i, j in vec:
             if is_on_board(x+i, y+j):
-                if state.board[x+i][y+j] + state.whose_move == INIT_TO_CODE['F']:
+                if state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['f']:
                     f_bool = True
                 f_cap.frozen[state.whose_move].append((x + i,y + j))
         if f_bool:
             captures.append(f_cap)
+            print("imi frozen")
 
         # imitate withdrawer
         w_cap = state.__copy__()
         if is_on_board(x0-i, y0-j)\
-                and state.board[x0-i][y0-j] + state.whose_move == INIT_TO_CODE['W']:
+                and state.board[x0-i][y0-j] - state.whose_move == INIT_TO_CODE['w']:
             w_cap.board[x0-i][y0-j] = 0
             captures.append(w_cap)
+            print("imi with Capture")
 
-        # imitate king
-        king_cap = state.__copy__()
-        if is_on_board(x, y) and abs(x0-x) <= 1 and abs(y0-y) <= 1 \
-                and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['k']:
-            king_cap.board[x][y] = 0
-            captures.append(king_cap)
-            print("king capture")
+        # # imitate king
+        # TODO: Currently broken
+        # king_cap = state.__copy__()
+        # if is_on_board(x, y) and abs(x0-x) <= 1 and abs(y0-y) <= 1 \
+        #         and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['k']:
+        #     king_cap.board[x][y] = 0
+        #     captures.append(king_cap)
 
     return captures
 
@@ -642,7 +650,7 @@ def king_capture(state, x, y, x1, y1, z_h):
         state.board[x][y] = 0
         state.kingPos[state.whose_move] = (x1, y1)
     state.static_eval()
-    print("New KING", z_h)
+    # print("New KING", z_h)
     ZOBRIST_M[z_h] = z_node(state)
     return state
 
@@ -650,9 +658,9 @@ def is_on_board(x,y):
     return x >= 0 and y >= 0 and x <= 7 and y <= 7
 
 if __name__ == "__main__":
-    state = State(old_board=INITIAL_2, whose_move=BLACK)
+    state = State(old_board=INITIAL_3, whose_move=BLACK)
     print(state)
-    print(z_hash(state.board))
+    # print(z_hash(state.board))
 
     now = datetime.now()
     new_state = iter_deep_search(state, now + timedelta(0, 10))
