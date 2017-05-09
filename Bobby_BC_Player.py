@@ -109,7 +109,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     try: 
         s = ZOBRIST_M[h]
     except:
-        s = z_node(state, z_hash(board))
+        s = z_node(state, static_eval(state))
     if len(s.children) == 0:
         child_states = get_child_states(state)
         for c in child_states:
@@ -128,6 +128,9 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
+        print("***********heap***********")
+        print(static_eval(c_state))
+        print(c_state)
         # time.sleep(0.25)
         # print("parent: ")
         # print(state)
