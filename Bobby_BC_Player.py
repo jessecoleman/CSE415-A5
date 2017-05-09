@@ -90,17 +90,16 @@ def is_over_time(endTime):
 
 def minimax_helper(state, depth, opt, endTime, alpha, beta):
     global ZOBRIST_M
-    time.sleep(.2)
-    print("child")
-    print(state)
+    # time.sleep(.2)
+    # print("child")
+    # print(state)
     # Time check
     if is_over_time(endTime):
         return (None, 0)
 
     # base case
     if depth == 0:
-        eval = static_eval(state)
-        return (state, eval)
+        return state.static_eval()
 
     board = state.board
     child_states = []
@@ -141,8 +140,13 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         if alpha >= beta:
             break
 
-        new_state, new_eval = minimax_helper(c_state, depth-1, -opt, endTime,
+        new_state = minimax_helper(c_state, depth-1, -opt, endTime,
                 alpha, beta)
+        if new_state != None:
+            new_eval = new_state.eval
+        else:
+            new_eval = 0
+
         if best == None:
             best = new_state
             best_eval = new_eval
@@ -157,7 +161,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             # set beta
             beta = min(beta, new_eval)
 
-    return (best, best_eval)
+    return best
 
 def minimax(state, depth, opt, endTime):
     child_states = get_child_states(state)
@@ -169,8 +173,14 @@ def minimax(state, depth, opt, endTime):
         if is_over_time(endTime):
             break
 
-        new_state, new_eval = minimax_helper(c_state, depth - 1, -opt, endTime,
+        new_state = minimax_helper(c_state, depth - 1, -opt, endTime,
                 -math.inf, math.inf)
+
+        if new_state != None:
+            new_eval = new_state.eval
+        else:
+            new_eval = 0
+
         if best == None or new_eval >= opt*best_eval:
             best = c_state
             best_eval = new_eval
@@ -277,6 +287,8 @@ class State:
         if len(frozen) == 0: self.frozen = freezer_search(old_board, whose_move)
         else: self.frozen = [[(f[0], f[1]) for f in i] for i in frozen]
 
+        self.eval = 0
+
     def __repr__(self):
         s = ''
         for r in range(8):
@@ -306,6 +318,9 @@ class State:
         else:
             lt = static_eval(self) < static_eval(other)
         return lt
+
+    def static_eval(self):
+        self.eval = static_eval(self)
 
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
@@ -363,8 +378,8 @@ def move(state, xPos, yPos):
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
                 child_states.append(king_capture(off, x, y, x+i, y+j))
-            if not child_states[-1].__eq__(defense):
-                child_states.append(defense)
+            # if not child_states[-1].__eq__(defense):
+            #     child_states.append(defense)
     return child_states
 
 def pincher_capture(state, x, y):
