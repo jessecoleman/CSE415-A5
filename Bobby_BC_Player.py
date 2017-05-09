@@ -71,39 +71,19 @@ def static_eval(state):
     return sum([sum([piece_vals[j] for j in i]) for i in state.board])
 
 
-def save_last_move(parent, child):
-    p_board = parent.board
-    c_board = child.board
-    for x in range(0, len(p_board)):
-        for y in range(0, len(p_board)):
-            if c_board[x][y] != p_board[x][y] and c_board[x][y] == 0\
-                    and who(p_board[x][y]) == parent.whose_move:
-                PAST_MOVE[0] = p_board[x][y]
-                PAST_MOVE[1] = x
-                PAST_MOVE[2] = y
-
-
 def iter_deep_search(currentState, endTime):
     depth = 0
     best = None
     while datetime.now() < endTime:
         depth += 1
-        print("depth", depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
-        # print("***************BEST STATE*************")
-        # print(best_state)
 
         if best_state != None:
             best = best_state
         else:
             break
-
-
-    # TODO: Remove if too intensive
-    #save_last_move(currentState, best)
-
     return best
 
 def is_over_time(endTime):
@@ -128,14 +108,10 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     child_states = []
     s = None
     h = z_hash(board)
-    # print(h)
-    # print(state)
-    time.sleep(0.1)
-    try: 
+    try:
         s = ZOBRIST_M[h]
     except:
         s = z_node(state)
-        print("*****************CREATED*****************")
     if len(s.children) == 0:
         child_states = get_child_states(state, h)
         for c in child_states:
@@ -144,9 +120,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             ZOBRIST_M[h1] = z_node(c)
         ZOBRIST_M[h] = s
     else:
-        #print("CHILDREN FOUND")
         for c in s.children:
-            #print(ZOBRIST_M[c].state)
             child_states.append(ZOBRIST_M[c].state)
     
     heapq.heapify(child_states)
@@ -156,14 +130,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
-        # print("***********heap***********")
-        # print(static_eval(c_state))
-        # print(c_state)
-        # print("parent: ")
-        # print(state)
-        # print("child: ")
-        # print(c_state)
-        # time.sleep(0.25)
 
         # Time check
         if is_over_time(endTime):
@@ -173,7 +139,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         if alpha > beta:
             break
 
-        #print("TESTING")
         new_state = minimax_helper(c_state, depth-1, -opt, endTime,
                 alpha, beta)
         if new_state != None:
@@ -198,8 +163,6 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     return best
 
 def minimax(state, depth, opt, endTime):
-
-
     h = z_hash(state.board)
     child_states = []
     s = None
@@ -209,17 +172,13 @@ def minimax(state, depth, opt, endTime):
         s = z_node(state)
     if len(s.children) == 0:
         child_states = get_child_states(state, h)
-        #print("COMPUTED CHILDREN")
         for c in child_states:
-            ##print("CHILD")
-            #print(c)
             h1 = z_hash(c.board)
             s.children.append(h1)
             c.static_eval()
             ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
-        #print("FOUND CHILDREN")
         for c in s.children:
             child_states.append(ZOBRIST_M[c].state)
 
@@ -403,11 +362,6 @@ vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 def move(state, z_h, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
-        # print("frozen")
-        # print(state)
-        # print("whose_move", state.whose_move)
-        # print(xPos, yPos)
-        # print(state.frozen)
         return []
     child_states = []
     # get current piece
@@ -430,15 +384,11 @@ def move(state, z_h, xPos, yPos):
                 x += i
                 y += j
 
-            # TODO: Remove if too intensive
-            # Should not move the same piece back to the same position
-            if piece == PAST_MOVE[0] and x == PAST_MOVE[1] \
-                    and y == PAST_MOVE[2] and piece_t != INIT_TO_CODE["k"]:
-                continue
 
             # copy old state move
             c_state = state.__copy__()
             c_state.whose_move = 1 - c_state.whose_move
+
             # pick up piece for move
             c_state.board[xPos][yPos] = 0
             c_state.board[x][y] = piece
@@ -466,8 +416,6 @@ def move(state, z_h, xPos, yPos):
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
                 child_states.append(king_capture(c_state, x, y, x+i, y+j, z_h))
-            #if not child_states[-1].__eq__(defense):
-                #child_states.append(defense)
             # king only moves one space
             if piece_t == INIT_TO_CODE['k']: break
             
