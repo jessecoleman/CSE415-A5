@@ -24,8 +24,6 @@ CODE_TO_INIT = {0: '-', 2: 'p', 3: 'P', 4: 'c', 5: 'C', 6: 'l', 7: 'L', 8: 'i', 
 
 PIECE_VALS = [0,0,-1,1,-2,2,-2,2,-3,3,-8,8,-100,100,-2,2]
 
-PAST_MOVE = [None, 0, 0] # Piece, x, y
-
 # initialize zobrist table
 random.seed(10)
 ZOBRIST_N = [[0]*14]*64
@@ -101,8 +99,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     # base case
     if depth == 0:
-        state.static_eval()
-        return state
+        return state.static_eval()
 
     board = state.board
     child_states = []
@@ -133,12 +130,11 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         # print("***********heap***********")
         # print(static_eval(c_state))
         # print(c_state)
+        # time.sleep(0.25)
         # print("parent: ")
         # print(state)
         # print("child: ")
         # print(c_state)
-        # time.sleep(0.25)
-
         # Time check
         if is_over_time(endTime):
             break
@@ -158,7 +154,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
             best = new_state
             best_eval = new_eval
         elif new_eval > opt*best_eval:
-            best = new_state
+            best = c_state
             best_eval = new_eval
 
         if opt == 1:
@@ -244,13 +240,13 @@ INITIAL_2 = parse('''
 
 INITIAL_3 = parse('''
 - - - - - - - -
-- - - P - - - -
-- - P P P - P -
-- P P i - P p P
-- - P P P - P -
-- - - P - - - -
 - - - - - - - -
-K - - - - - - k
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+- - - - - - - -
+K w - - - - - k
 ''')
 
 def king_search(board):
@@ -380,7 +376,7 @@ def move(state, xPos, yPos):
                 child_states.append(leaper_capture(off, x, y, i, j))
             # if piece is imitator
             elif piece_t == INIT_TO_CODE['i']:
-                child_states.extend(imitator_capture(off,x,y,xPos,yPos,i,j))
+                child_states.append(imitator_capture(off,x,y,xPos,yPos,i,j))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
                 child_states.append(withdrawer_capture(off, xPos-i, yPos-j))
@@ -434,12 +430,9 @@ def imitator_capture(state, x, y, x0, y0, i, j):
         # imitate pincher
         p_cap = state.__copy__()
         for i, j in vec[0:4]:
-
-
             if is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
-                    and who(state.board[x+i][y+j]) - state.whose_move == INIT_TO_CODE['P'] \
-                    and state.board[x+2*i][y+2*j] + state.whose_move == INIT_TO_CODE['P']:
-                print("Imatating Pincher")
+                    and who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['P'] \
+                    and state.board[x+2*i][y+2*j] - state.whose_move == INIT_TO_CODE['P']:
                 p_cap.board[x+i][y+j] = 0
                 captures.append(p_cap)
 
@@ -487,7 +480,7 @@ def imitator_capture(state, x, y, x0, y0, i, j):
         if is_on_board(x+i, y+j)\
                 and state.board[x+i][y+j] - state.whose_move == INIT_TO_CODE['K']:
             state.board[x+i][y+j] = 0
-    return captures
+    return state
 
 def withdrawer_capture(state, x, y):
     if is_on_board(x, y):
@@ -511,6 +504,6 @@ if __name__ == "__main__":
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 30))
+    new_state = iter_deep_search(state, now + timedelta(0, 23))
 
     print(new_state)
