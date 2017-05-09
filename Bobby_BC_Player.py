@@ -125,6 +125,7 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
 
     best = None
     best_eval = 0
+
     while len(child_states) != 0:
         c_state = heapq.heappop(child_states)
         # time.sleep(0.25)
@@ -225,15 +226,16 @@ INITIAL_2 = parse('''
 ''')
 
 INITIAL_3 = parse('''
-- - - - - - k -
 - - - - - - - -
 - - - - - - - -
 - - - - - - - -
-- - - - - - K p
-- - - - - p - -
 - - - - - - - -
 - - - - - - - -
+- - - - - - - -
+- - - - - - - -
+K w - - - - - k
 ''')
+
 def king_search(board):
     wKingPiece = None
     bKingPiece = None
@@ -255,7 +257,7 @@ def freezer_search(board, whose_move):
                         frozen[who(board[x][y])].append((x+i, y+j))
     return frozen
 
-def zhash(board):
+def z_hash(board):
     global ZOBRIST_N
     val = 0
     for x in range(8):
@@ -467,9 +469,9 @@ def withdrawer_capture(state, x, y):
 
 def king_capture(state, x, y, x1, y1):
     if is_on_board(x,y) and is_on_board(x1, y1)\
-            and who(state.board[x1][y1]) != state.whose_move \
+            and who(state.board[x1][y1]) != who(state.board[x][y]) \
             and state.board[x1][y1] != 0:
-        state.board[x1][y1] == state.board[x][y]
+        state.board[x1][y1] = state.board[x][y]
         state.board[x][y] = 0
         state.kingPos[state.whose_move] = (x1, y1)
     return state
@@ -478,10 +480,10 @@ def is_on_board(x,y):
     return x >= 0 and y >= 0 and x <= 7 and y <= 7
 
 if __name__ == "__main__":
-    state = State(old_board=INITIAL_2)
+    state = State(old_board=INITIAL_3, whose_move=BLACK)
     print(state)
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 18))
+    new_state = iter_deep_search(state, now + timedelta(0, 19))
 
     print(new_state)
