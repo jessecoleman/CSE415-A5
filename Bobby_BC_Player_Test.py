@@ -80,7 +80,7 @@ def iter_deep_search(currentState, endTime):
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
 
-        if best_state != None and best_state != currentState:
+        if best_state != None:
             best = best_state
         else:
             break
@@ -262,11 +262,11 @@ F L I W K I L C
 INITIAL_2 = parse('''
 k - - - - - - -
 - - - - - - - -
-- - - - - - p -
+- - - - p - l -
+- c - - - - - -
 - - - - - - - -
-- - - - - - - -
-- - - - - - - -
-- - - - - - - -
+- C - - - - - -
+- - - - P - - -
 - - - - - - - K
 ''')
 
@@ -359,7 +359,7 @@ class State:
 
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
-def move(state, zobrist_h, xPos, yPos, endTime):
+def move(state, z_h, xPos, yPos, endTime):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
         return []
@@ -395,7 +395,6 @@ def move(state, zobrist_h, xPos, yPos, endTime):
             # pick up piece for move
             c_state.board[xPos][yPos] = 0
             c_state.board[x][y] = piece
-            z_h = zobrist_h
             z_h ^= ZOBRIST_N[8*xPos+yPos][c_state.board[xPos][yPos]]
             z_h ^= ZOBRIST_N[8*x+y][c_state.board[x][y]]
             if piece_t == INIT_TO_CODE['p']:
@@ -512,6 +511,7 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
         if k_bool:
             captures.append(k_cap)
 
+
         # imitate freezer
         f_cap = state.__copy__()
         f_bool = False
@@ -564,6 +564,7 @@ def is_on_board(x,y):
 if __name__ == "__main__":
     state = State(old_board=INITIAL_3, whose_move=BLACK)
     print(state)
+    # print(z_hash(state.board))
 
     now = datetime.now()
     new_state = iter_deep_search(state, now + timedelta(0, 10))
