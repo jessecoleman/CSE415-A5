@@ -436,8 +436,10 @@ def imitator_capture(state, x, y, x0, y0, i, j):
         for i, j in vec[0:4]:
 
 
+            print(who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['p'])
+
             if is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
-                    and who(state.board[x+i][y+j]) - state.whose_move == INIT_TO_CODE['P'] \
+                    and who(state.board[x+i][y+j]) + state.whose_move == INIT_TO_CODE['p'] \
                     and state.board[x+2*i][y+2*j] + state.whose_move == INIT_TO_CODE['P']:
                 print("Imatating Pincher")
                 p_cap.board[x+i][y+j] = 0
