@@ -35,9 +35,8 @@ for x in range(64):
         ZOBRIST_N[x][y] = random.randint(0, 2**64)
 
 class z_node:
-    def __init__(self, state, static_eval, children=[]):
+    def __init__(self, state, children=[]):
         self.state = state
-        self.static_eval = static_eval
         self.children = children
 
 def makeMove(currentState, currentRemark, timelimit):
@@ -74,6 +73,7 @@ def iter_deep_search(currentState, endTime):
     best = None
     while datetime.now() < endTime:
         depth += 1
+        print(depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
@@ -111,13 +111,13 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     try: 
         s = ZOBRIST_M[h]
     except:
-        s = z_node(state, static_eval(state))
+        s = z_node(state)
     if len(s.children) == 0:
-        child_states = get_child_states(state)
+        child_states = get_child_states(state, h)
         for c in child_states:
             h1 = z_hash(c.board)
             s.children.append(h1)
-            ZOBRIST_M[h1] = z_node(c, static_eval(c)) 
+            ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
         for c in s.children:
@@ -171,7 +171,23 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
     return best
 
 def minimax(state, depth, opt, endTime):
-    child_states = get_child_states(state)
+    h = z_hash(state.board)
+    child_states = []
+    try:
+        s = ZOBRIST_M[h]
+    except:
+        s = z_node(state)
+    if len(s.children) == 0:
+        child_states = get_child_states(state, h)
+        for c in child_states:
+            print(c)
+            h1 = z_hash(c.board)
+            s.children.append(h1)
+            ZOBRIST_M[h1] = z_node(c) 
+        ZOBRIST_M[h] = s 
+    else:
+        for c in s.children:
+            child_states.append(ZOBRIST_M[c].state)
 
     best = None
     best_eval = 0
@@ -194,7 +210,7 @@ def minimax(state, depth, opt, endTime):
 
     return best
 
-def get_child_states(state):
+def get_child_states(state, h):
     board = state.board
     child_states = []
     for x in range(0, len(board)):
@@ -203,7 +219,7 @@ def get_child_states(state):
             piece = board[x][y]
             # if current player is the same color as the piece get all child states
             if piece != 0 and who(piece) == state.whose_move:
-                child_states += move(state, x, y)
+                child_states += move(state, h, x, y)
 
     return child_states
 
@@ -333,7 +349,7 @@ class State:
 
 vec = [(0,1), (0,-1), (1,0), (-1,0), (1,1), (-1,-1), (1,-1), (-1,1)]
 
-def move(state, xPos, yPos):
+def move(state, z_h, xPos, yPos):
     # if piece is frozen by opponent's freezer
     if (xPos, yPos) in state.frozen[1-state.whose_move]: 
         # print("frozen")
@@ -359,76 +375,97 @@ def move(state, xPos, yPos):
             # king only moves one space
             if piece_t == INIT_TO_CODE['k'] \
                     and (abs(x-xPos) > 1 or abs(y-yPos) > 1): break
-            # non-aggressive move
-            defense = state.__copy__()
-            defense.whose_move = 1 - defense.whose_move
+            # copy old state move
+            c_state = state.__copy__()
+            c_state.whose_move = 1 - c_state.whose_move
             # pick up piece for move
-            defense.board[xPos][yPos] = 0
-            defense.board[x][y] = piece
-            # aggressive move
-            off = defense.__copy__()
+            c_state.board[xPos][yPos] = 0
+            c_state.board[x][y] = piece
+            z_h ^= ZOBRIST_N[8*xPos+yPos][c_state.board[xPos][yPos]]
+            z_h ^= ZOBRIST_N[8*x+y][c_state.board[x][y]]
             if piece_t == INIT_TO_CODE['p']:
-                child_states.append(pincher_capture(off, x, y))
+                child_states.append(pincher_capture(c_state, x, y, z_h))
             # if piece is coordinator
             elif piece_t == INIT_TO_CODE['c']:
-                child_states.append(coordinator_capture(off, x, y))
+                child_states.append(coordinator_capture(c_state, x, y, z_h))
             # if piece is freezer
             elif piece_t == INIT_TO_CODE['f']:
-                child_states.append(freezer_capture(off, x, y))
+                child_states.append(freezer_capture(c_state, x, y, z_h))
             # if piece is leaper
             elif piece_t == INIT_TO_CODE['l']:
-                child_states.append(leaper_capture(off, x, y, i, j))
+                child_states.append(leaper_capture(c_state, x, y, i, j, z_h))
             # if piece is imitator
             elif piece_t == INIT_TO_CODE['i']:
-                child_states.extend(imitator_capture(off,x,y,xPos,yPos,i,j))
+                child_states.extend(imitator_capture(c_state,x,y,xPos,yPos,i,j,
+                    z_h))
             # if piece is withdrawer
             elif piece_t == INIT_TO_CODE['w']:
-                child_states.append(withdrawer_capture(off, xPos-i, yPos-j))
+                child_states.append(withdrawer_capture(c_state, xPos-i, yPos-j,
+                    z_h))
             # if piece is king
             elif piece_t == INIT_TO_CODE['k']:
-                child_states.append(king_capture(off, x, y, x+i, y+j))
-            # if not child_states[-1].__eq__(defense):
-            #     child_states.append(defense)
+                child_states.append(king_capture(c_state, x, y, x+i, y+j, z_h))
+            #if not child_states[-1].__eq__(defense):
+                #child_states.append(defense)
     return child_states
 
-def pincher_capture(state, x, y):
+def pincher_capture(state, x, y, z_h):
+    global ZOBRIST_M
     piece = state.board[x][y]
     # search surrounding spaces to look for a capture
     for i, j in vec[0:4]:
         if is_on_board(x, y) and is_on_board(x+i, y+j) and is_on_board(x+2*i, y+2*j)\
                 and who(state.board[x+i][y+j]) != who(piece) \
                 and state.board[x+2*i][y+2*j] == piece:
+            z_h ^= ZOBRIST_N[8*(x+i)+y+j][state.board[x+i][y+j]]
             state.board[x+i][y+j] = 0
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
-def coordinator_capture(state, x, y):
+def coordinator_capture(state, x, y, z_h):
+    global ZOBRIST_M
     kx, ky = state.kingPos[state.whose_move]
     # try to coordinate with king to capture
     if is_on_board(x,y) and is_on_board(x, ky)\
             and who(state.board[x][y]) != who(state.board[x][ky]):
+        z_h ^= ZOBRIST_N[8*x+ky][state.board[x][ky]]
         state.board[x][ky] = 0
     if is_on_board(x,y) and is_on_board(kx, y)\
             and who(state.board[x][y]) != who(state.board[kx][y]):
+        z_h ^= ZOBRIST_N[8*kx+y][state.board[kx][y]]
         state.board[kx][y] = 0
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
-def freezer_capture(state, x, y):
+def freezer_capture(state, x, y, z_h):
+    global ZOBRIST_M
     state.frozen[state.whose_move] = []
     for i, j in vec:
         if is_on_board(x+i, y+j):
             state.frozen[state.whose_move].append((x+i,y+j))
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
-def leaper_capture(state, x, y, i, j):
+def leaper_capture(state, x, y, i, j, z_h):
+    global ZOBRIST_M
     if is_on_board(x,y) and is_on_board(x+i, y+j) and is_on_board(x+2*i,y+2*j)\
             and who(state.board[x+i][y+j]) != who(state.board[x][y]) \
-            and state.board[x+i][y+j] != 0:
+            and state.board[x+i][y+j] != 0 and state.board[x+2*i][y+2*j] == 0:
+        z_h ^= ZOBRIST_N[8*(x+2*i)+(y+2*j)][state.board[x][y]]
+        z_h ^= ZOBRIST_N[8*x+y][state.board[x][y]]
+        z_h ^= ZOBRIST_N[8*(x+i)+y+j][state.board[x+i][y+j]]
         state.board[x+2*i][y+2*j] = state.board[x][y]
         state.board[x][y] = 0
         state.board[x+i][y+j] = 0
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
-def imitator_capture(state, x, y, x0, y0, i, j):
+def imitator_capture(state, x, y, x0, y0, i, j, z_h):
+    global ZOBRIST_M
     captures = [state.__copy__()]
     if is_on_board(x,y):
         # imitate pincher
@@ -491,18 +528,28 @@ def imitator_capture(state, x, y, x0, y0, i, j):
             state.board[x+i][y+j] = 0
     return captures
 
-def withdrawer_capture(state, x, y):
+def withdrawer_capture(state, x, y, z_h):
+    global ZOBRIST_M
     if is_on_board(x, y):
+        z_h ^= ZOBRIST_N[8*x+y][state.board[x][y]]
         state.board[x][y] = 0
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
-def king_capture(state, x, y, x1, y1):
+def king_capture(state, x, y, x1, y1, z_h):
+    global ZOBRIST_M
     if is_on_board(x,y) and is_on_board(x1, y1)\
             and who(state.board[x1][y1]) != who(state.board[x][y]) \
             and state.board[x1][y1] != 0:
+        z_h ^= ZOBRIST_N[8*x1+y1][state.board[x1][y1]]
+        z_h ^= ZOBRIST_N[8*x1+y1][state.board[x][y]]
+        z_h ^= ZOBRIST_N[8*x+y][state.board[x][y]]
         state.board[x1][y1] = state.board[x][y]
         state.board[x][y] = 0
         state.kingPos[state.whose_move] = (x1, y1)
+    state.static_eval()
+    ZOBRIST_M[z_h] = z_node(state)
     return state
 
 def is_on_board(x,y):
