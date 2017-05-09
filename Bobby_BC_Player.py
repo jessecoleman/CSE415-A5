@@ -11,7 +11,7 @@ import random
 
 # GLOBAL VARIABLES
 BEST_STATE = None
-TIME_LIMIT_OFFSET = 0.01
+TIME_LIMIT_OFFSET = 0.1
 
 BLACK = 0
 WHITE = 1
@@ -88,7 +88,7 @@ def iter_deep_search(currentState, endTime):
     best = None
     while datetime.now() < endTime:
         depth += 1
-        # print("depth", depth)
+        print("depth", depth)
         # whether to minimize or maximize
         opt = -1 if currentState.whose_move == BLACK else 1
         best_state = minimax(currentState, depth, opt, endTime)
@@ -102,7 +102,7 @@ def iter_deep_search(currentState, endTime):
 
 
     # TODO: Remove if too intensive
-    save_last_move(currentState, best)
+    #save_last_move(currentState, best)
 
     return best
 
@@ -137,12 +137,11 @@ def minimax_helper(state, depth, opt, endTime, alpha, beta):
         s = z_node(state)
         print("*****************CREATED*****************")
     if len(s.children) == 0:
-        print("CHILDREN EMPTY")
         child_states = get_child_states(state, h)
         for c in child_states:
             h1 = z_hash(c.board)
             s.children.append(h1)
-            #ZOBRIST_M[h1] = z_node(c) 
+            ZOBRIST_M[h1] = z_node(c) 
         ZOBRIST_M[h] = s 
     else:
         #print("CHILDREN FOUND")
@@ -304,11 +303,11 @@ F L I W K I L C
 INITIAL_2 = parse('''
 k - - - - - - -
 - - - - - - - -
+- - - - p - l -
+- c - - - - - -
 - - - - - - - -
-- - - - - - - -
-- - - - - - - -
-- - - - - - - -
-- - - - - - - -
+- C - - - - - -
+- - - - P - - -
 - - - - - - - K
 ''')
 
@@ -548,7 +547,6 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
         kx, ky = state.kingPos[state.whose_move]
         k_cap = state.__copy__()
         k_bool = False
-        print(state.board[x][ky], state.whose_move, INIT_TO_CODE['c'])
         if is_on_board(x, ky) \
                 and who(state.board[x][y]) != who(state.board[x][ky]) \
                 and state.board[x][ky] - state.whose_move == INIT_TO_CODE['c']:
@@ -586,7 +584,6 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
                 f_cap.frozen[state.whose_move].append((x + i,y + j))
         if f_bool:
             captures.append(f_cap)
-            print("imi frozen")
 
         # imitate withdrawer
         w_cap = state.__copy__()
@@ -594,7 +591,6 @@ def imitator_capture(state, x, y, x0, y0, i, j, z_h):
                 and state.board[x0-i][y0-j] - state.whose_move == INIT_TO_CODE['w']:
             w_cap.board[x0-i][y0-j] = 0
             captures.append(w_cap)
-            print("imi with Capture")
 
         # # imitate king
         # TODO: Currently broken
@@ -635,11 +631,11 @@ def is_on_board(x,y):
     return x >= 0 and y >= 0 and x <= 7 and y <= 7
 
 if __name__ == "__main__":
-    state = State(old_board=INITIAL_3, whose_move=BLACK)
+    state = State(old_board=INITIAL_2, whose_move=BLACK)
     print(state)
     # print(z_hash(state.board))
 
     now = datetime.now()
-    new_state = iter_deep_search(state, now + timedelta(0, 30))
+    new_state = iter_deep_search(state, now + timedelta(0, 10))
 
     print(new_state)
